@@ -4,6 +4,6 @@
 .Ruserdata
 
 # Rasters
-shiny-app/rasters*
+shiny-app/rasters/*
 !shiny-app/rasters/.gitkeep
 
