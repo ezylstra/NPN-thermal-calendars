@@ -1,7 +1,7 @@
 # App to display rasters with mean day-of-year (or SD) that AGDD thresholds are
 # reached in the northeastern US
 # E. Zylstra
-# 18 Feb 2025
+# 19 Feb 2025
 
 library(raster)
 library(shiny)
@@ -38,7 +38,8 @@ all_rast <- raster::brick(all_rast)
 
 ui <- fluidPage(
   
-  titlePanel("Testing maps"),
+  titlePanel("What day of the year do locations in the northeastern U.S. reach 
+             accumulated heat thresholds?"),
   
   sidebarLayout(
     
@@ -56,14 +57,34 @@ ui <- fluidPage(
                   label = "Opacity:",
                   min = 0,
                   max = 1, 
-                  value = 0.8)
+                  value = 0.8),
       
+      p("Zoom in and click on the map to identify the mean day of the year (or 
+        SD) for a specific location. Value will appear in the lower left corner
+        of the map."),
+      
+      br(),
+      
+      p(tags$strong("METHODS:")),
+      p("For each year from xxxx-xxxx, we obtained daily minimum and maximum 
+        temperatures for the northeastern US at 4-km resolution from the 
+        PRISM Climate Group (Oregon State University, ",
+        a(href = "https://prism.oregonstate.edu", 
+          "https://prism.oregonstate.edu", .noWS = "after"),
+        "). We used these data to calculate accumulated growing degree days 
+        (AGDD) using the Baskerville-Emin method with a base temperature of 50 
+        deg F, and identified the day of the year that each threshold was
+        reached. The maps display the mean day of the year each threshold was
+        reached (or the standard deviation, SD) over the xx-year period.")
+
     ), # end sidebarPanel
     
     mainPanel(
       
-      leafletOutput("map", height = 700)
+      leafletOutput("map", height = "80vh"),
       
+      p("The data and code behind this webpage are available at... (USA-NPN github)?")
+
     ) # end mainPanel
   ) # end sidebarLayout
 ) # end fluidPage
