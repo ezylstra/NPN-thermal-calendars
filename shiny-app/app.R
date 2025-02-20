@@ -33,7 +33,6 @@ sds_rast[sds_rast == Inf] <- NA
 
 all_rast <- raster::stack(means_rast, sds_rast)
 all_rast <- raster::brick(all_rast)
-# all_rast <- projectRasterForLeaflet(all_rast, method = "bilinear")
 
 
 ui <- fluidPage(
