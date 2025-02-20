@@ -3,7 +3,7 @@
 .RData
 .Ruserdata
 
-# Rasters
-shiny-app/rasters/*
-!shiny-app/rasters/.gitkeep
+# Original mead, SD rasters
+mean-sd-rasters/*
+!mean-sd-rasters/.gitkeep
 
