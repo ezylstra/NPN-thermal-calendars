@@ -1,19 +1,20 @@
 # Exploring mean and SD rasters
-# E. Zylstra
+
+# ER Zylstra
 # 20 Feb 2025
 
 library(terra)
 
-tcdf <- read.csv("shiny-app/parameters.csv")
-thresholds <- sort(unique(tcdf$threshold)) # 50 of them
+params <- read.csv("shiny-app/parameters.csv")
+thresholds <- sort(unique(params$threshold))
 
 means_list <- list()
 sds_list <- list()
 
 for (i in 1:length(thresholds)) {
-  means_list[[i]] <- rast(paste0("shiny-app/rasters/normals_mean_", 
+  means_list[[i]] <- rast(paste0("mean-sd-rasters/normals_mean_", 
                                    thresholds[i], ".tiff"))
-  sds_list[[i]] <- rast(paste0("shiny-app/rasters/normals_sd_", 
+  sds_list[[i]] <- rast(paste0("mean-sd-rasters/normals_sd_", 
                                  thresholds[i], ".tiff"))
 }
 means_rast <- rast(means_list)
@@ -63,6 +64,6 @@ table(values(mn1), values(sd1))
 # What conditions produce mean = Inf (and SD = NA)?
 
 # For interactive tool, should we include cells that reached the threshold only
-# once in mean layers? If so, probably need to identify those cells in the SD
-# layer to more clearly indicate that the threshold was only reached once.  
+# once in mean maps? If so, might need to identify those cells in the SD
+# layer to more clearly indicate that the threshold was only reached once. 
 
