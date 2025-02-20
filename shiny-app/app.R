@@ -1,39 +1,31 @@
 # App to display rasters with mean day-of-year (or SD) that AGDD thresholds are
 # reached in the northeastern US
-# E. Zylstra
-# 19 Feb 2025
+
+# ER Zylstra
+# 20 Feb 2025
 
 library(raster)
 library(shiny)
 library(leaflet)
 library(leafem)
 
+
 # Note: using raster instead of terra since terra doesn't seem to play nice with 
 # leafem::addImageQuery()
 
-tcdf <- read.csv("parameters.csv")
-thresholds <- sort(unique(tcdf$threshold))
+# Load file that lists summary statistics and thresholds
+params <- read.csv("parameters.csv")
 
-means_list <- list()
-sds_list <- list()
+# Load RasterBrick and name layers
+all_rast <- brick("mean-sd-brick.tif")
+lyr_names <- paste0(tolower(params$summary), "_", params$threshold)
+names(all_rast) <- lyr_names
+  # Imported raster brick was projected for Leaflet already:
+  # +proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 
+  # +units=m +nadgrids=@null +wktext +no_defs
 
-for (i in 1:length(thresholds)) {
-  means_list[[i]] <- raster(paste0("rasters/normals_mean_", 
-                                   thresholds[i], ".tiff"))
-  sds_list[[i]] <- raster(paste0("rasters/normals_sd_", 
-                                 thresholds[i], ".tiff"))
-}
-means_rast <- raster::stack(means_list)
-names(means_rast) <- paste0("mean_", thresholds)
-means_rast[means_rast == Inf] <- NA
 
-sds_rast <- raster::stack(sds_list)
-names(sds_rast) <- paste0("sd_", thresholds)
-sds_rast[sds_rast == Inf] <- NA
-
-all_rast <- raster::stack(means_rast, sds_rast)
-all_rast <- raster::brick(all_rast)
-
+# ui --------------------------------------------------------------------------#
 
 ui <- fluidPage(
   
@@ -46,11 +38,11 @@ ui <- fluidPage(
       
       selectInput(inputId = "threshold", 
                   label = "AGDD threshold (deg F):", 
-                  choices = unique(tcdf$threshold)),
+                  choices = unique(params$threshold)),
       
       selectInput(inputId = "summary",
                   label = "Summary statistic:",
-                  choices = unique(tcdf$summary)),
+                  choices = unique(params$summary)),
       
       sliderInput(inputId = "opacity",
                   label = "Opacity:",
@@ -88,6 +80,9 @@ ui <- fluidPage(
   ) # end sidebarLayout
 ) # end fluidPage
 
+
+# server ----------------------------------------------------------------------#
+
 server <- shinyServer(function(input, output) {
   
   reacRaster <- reactive({all_rast[[paste0(tolower(input$summary), 
@@ -116,7 +111,7 @@ server <- shinyServer(function(input, output) {
                      group = "Value",
                      layerId = "Value",
                      opacity = input$opacity, 
-                     project = TRUE) %>%
+                     project = FALSE) %>%
       addLegend("bottomright", pal = pal, 
                 values = values(reacRaster()),
                 title = legend_title(), opacity = 0.8) %>%
@@ -130,5 +125,7 @@ server <- shinyServer(function(input, output) {
   })
   
 })
+
+# run app ---------------------------------------------------------------------#
 
 shinyApp(ui = ui, server = server)
