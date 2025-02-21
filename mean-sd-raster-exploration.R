@@ -71,12 +71,14 @@ combo_classes <- data.frame(id = c(0, 1, 2, 4, 7),
                                      "mean = value; SD = 0"))
 levels(combo) <- combo_classes
 
+# Plot different mean-SD combinations
 ggplot() +
   geom_spatraster(data = combo) +
   scale_fill_brewer(palette = "Accent") +
   theme(legend.position = "bottom",
         legend.title = element_blank())
 
+# Counts of cells in each category
 freq(combo)
 
 # A few cells with SD = 0 and mean = some value between 1 and 365. I assume 
