@@ -2,7 +2,7 @@
 # reached in the northeastern US
 
 # ER Zylstra
-# 20 Feb 2025
+# 25 Feb 2025
 
 library(raster)
 library(shiny)
@@ -23,7 +23,6 @@ names(all_rast) <- lyr_names
   # Imported raster brick was projected for Leaflet already:
   # +proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 
   # +units=m +nadgrids=@null +wktext +no_defs
-
 
 # ui --------------------------------------------------------------------------#
 
@@ -57,7 +56,7 @@ ui <- fluidPage(
       br(),
       
       p(tags$strong("METHODS:")),
-      p("For each year from xxxx-xxxx, we obtained daily minimum and maximum 
+      p("For each year from 1991-2020, we obtained daily minimum and maximum 
         temperatures for the northeastern US at 4-km resolution from the 
         PRISM Climate Group (Oregon State University, ",
         a(href = "https://prism.oregonstate.edu", 
@@ -66,7 +65,7 @@ ui <- fluidPage(
         (AGDD) using the Baskerville-Emin method with a base temperature of 50 
         deg F, and identified the day of the year that each threshold was
         reached. The maps display the mean day of the year each threshold was
-        reached (or the standard deviation, SD) over the xx-year period.")
+        reached (or the standard deviation, SD) over the 30-year period.")
 
     ), # end sidebarPanel
     
@@ -74,12 +73,13 @@ ui <- fluidPage(
       
       leafletOutput("map", height = "80vh"),
       
+      br(),
+      
       p("The data and code behind this webpage are available at... (USA-NPN github)?")
 
     ) # end mainPanel
   ) # end sidebarLayout
 ) # end fluidPage
-
 
 # server ----------------------------------------------------------------------#
 
