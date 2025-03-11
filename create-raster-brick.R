@@ -18,13 +18,18 @@ thresholds <- sort(unique(params$threshold))
 # Load rasters into a list 
 means_list <- list()
 sds_list <- list()
+counts_list <- list()
 
 for (i in 1:length(thresholds)) {
-  means_list[[i]] <- raster(paste0("mean-sd-rasters/normals_mean_", 
+  means_list[[i]] <- raster(paste0("rasters-means/normals_mean_", 
                                    thresholds[i], ".tiff"))
-  sds_list[[i]] <- raster(paste0("mean-sd-rasters/normals_sd_", 
+  sds_list[[i]] <- raster(paste0("rasters-sds/normals_sd_", 
                                  thresholds[i], ".tiff"))
+  counts_list[[i]] <- raster(paste0("rasters-counts/normals_count_", 
+                                    thresholds[i], ".tiff"))
 }
+
+# PICK UP HERE ONCE WE'VE SORTED OUT THE COUNT/YEARS ISSUE ################
 
 # Create RasterStacks, rename layers, and replace Inf values with NA
 means_rast <- stack(means_list)
