@@ -3,7 +3,10 @@
 .RData
 .Ruserdata
 
-# Original mead, SD rasters
-mean-sd-rasters/*
-!mean-sd-rasters/.gitkeep
-
+# Original mean, SD, count rasters
+rasters-means/*
+!rasters-means/.gitkeep
+rasters-sds/*
+!rasters-sds/.gitkeep
+rasters-counts/*
+!rasters-counts/.gitkeep
