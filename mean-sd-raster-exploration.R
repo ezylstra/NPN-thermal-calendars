@@ -81,6 +81,15 @@ ggplot() +
 # Counts of cells in each category
 freq(combo)
 
+# Based on emails with Eric Scott, here's what all these things mean:
+# Mean and SD = NA: outside area of interest
+# Mean = Inf (and SD = NA): cell never reached threshold
+# Mean = value and SD = NA: cell reached threshold once
+# Mean = value and SD = 0: cell reached threshold more than once, but on the same day
+# mean = value and SD = value: cell reached threshold more than once (different days)
+
+
+
 # A few cells with SD = 0 and mean = some value between 1 and 365. I assume 
   # this happens if there's only one annual value or if all annual values are 
   # identical
@@ -93,6 +102,4 @@ freq(combo)
 # once in mean maps? If so, we might need to identify those cells in the SD
 # layer to more clearly indicate that the threshold was only reached once. 
 
-# Looking at _targets.R, I think we've calculated the population SD, which is:
-# sqrt(sum((x-mean(x))^2) / length(x))
 
