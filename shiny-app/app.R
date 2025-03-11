@@ -4,11 +4,11 @@
 # ER Zylstra
 # 25 Feb 2025
 
+library(lubridate)
 library(raster)
 library(shiny)
 library(leaflet)
 library(leafem)
-
 
 # Note: using raster instead of terra since terra doesn't seem to play nice with 
 # leafem::addImageQuery()
@@ -23,6 +23,19 @@ names(all_rast) <- lyr_names
   # Imported raster brick was projected for Leaflet already:
   # +proj=merc +a=6378137 +b=6378137 +lat_ts=0 +lon_0=0 +x_0=0 +y_0=0 +k=1 
   # +units=m +nadgrids=@null +wktext +no_defs
+
+# Modify function used to format legend labels so we can add dates
+myLabelFormat <- function(..., dates = FALSE){ 
+  if (dates) { 
+    function(type = "numeric", cuts) { 
+      dd <- parse_date_time(paste("2019", cuts), orders = "%Y %j")
+      dd <- format(dd, "%d %B")
+      paste0(cuts, " (", dd, ")")
+    } 
+  } else {
+    labelFormat(...)
+  }
+}
 
 # ui --------------------------------------------------------------------------#
 
@@ -91,6 +104,10 @@ server <- shinyServer(function(input, output) {
   legend_title <- reactive({ifelse(input$summary == "SD",
                                    "SD (days)", "Day of year")})
   
+  legend_labels <- reactive({ifelse(input$summary == "SD",
+                                    myLabelFormat(dates = FALSE),
+                                    myLabelFormat(dates = TRUE))})
+  
   output$map <- renderLeaflet({
     leaflet() %>%
       fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
@@ -112,9 +129,12 @@ server <- shinyServer(function(input, output) {
                      layerId = "Value",
                      opacity = input$opacity, 
                      project = FALSE) %>%
-      addLegend("bottomright", pal = pal, 
+      addLegend("bottomright", 
+                pal = pal, 
                 values = values(reacRaster()),
-                title = legend_title(), opacity = 0.8) %>%
+                labFormat = legend_labels(),
+                title = legend_title(), 
+                opacity = 0.8) %>%
       addImageQuery(reacRaster(),
                     digits = 2,
                     type = "click",
