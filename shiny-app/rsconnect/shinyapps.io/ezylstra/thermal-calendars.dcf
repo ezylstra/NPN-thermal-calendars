@@ -5,7 +5,7 @@ account: ezylstra
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 14035710
-bundleId: 9854659
+bundleId: 9939930
 url: https://ezylstra.shinyapps.io/thermal-calendars/
 version: 1
 asMultiple: FALSE
