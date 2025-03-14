@@ -9,6 +9,7 @@ library(raster)
 library(shiny)
 library(leaflet)
 library(leafem)
+library(htmlwidgets)
 
 # Note: using raster instead of terra since terra doesn't seem to play nice with 
 # leafem::addImageQuery()
@@ -111,7 +112,7 @@ server <- shinyServer(function(input, output) {
   output$map <- renderLeaflet({
     leaflet() %>%
       fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
-      addTiles() 
+      addTiles()
   })
   
   observe({
@@ -133,18 +134,28 @@ server <- shinyServer(function(input, output) {
                 pal = pal, 
                 values = values(reacRaster()),
                 labFormat = legend_labels(),
+                # labFormat = myLabelFormat(dates = TRUE),
                 title = legend_title(), 
                 opacity = 0.8) %>%
+      htmlwidgets::onRender("
+        function(el, x) {
+          var labels = el.querySelectorAll('.info.legend text'); // 1
+          labels.forEach(function(label) {
+            label.setAttribute('text-anchor', 'start'); // 2
+            label.setAttribute('dx', '5'); // set left indentation [px]
+          });
+        }
+      ") %>%
       addImageQuery(reacRaster(),
                     digits = 2,
                     type = "click",
                     position = "bottomleft",
                     prefix = "",
                     layerId = "Value",
-                    project = TRUE)
-  })
-  
-})
+                    project = TRUE)   
+
+  }) # end observe
+}) # end server
 
 # run app ---------------------------------------------------------------------#
 
