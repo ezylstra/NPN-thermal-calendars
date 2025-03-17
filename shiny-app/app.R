@@ -2,7 +2,7 @@
 # reached in the northeastern US
 
 # ER Zylstra
-# 25 Feb 2025
+# 16 Mar 2025
 
 library(lubridate)
 library(raster)
@@ -112,7 +112,27 @@ server <- shinyServer(function(input, output) {
   output$map <- renderLeaflet({
     leaflet() %>%
       fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
-      addTiles()
+      addTiles() %>%
+      htmlwidgets::onRender("
+          function(el, x) {
+            const observer = new MutationObserver(function(mutations) {
+              mutations.forEach(function(mutation) {
+                if (mutation.addedNodes.length > 0) {
+                  var labels = el.querySelectorAll('.info.legend text'); // 1 Find all legend text elements as before
+                  if (labels.length > 0) {
+                    //console.log('Applying text alignment to', labels.length, 'legend labels');
+                    labels.forEach(function(label) {
+                      label.setAttribute('text-anchor', 'start'); // 2
+                      label.setAttribute('dx', '5');
+                    });
+                  }
+                }
+              });
+            });
+            // 3 observing the entire map container el for changes
+            observer.observe(el, { childList: true, subtree: true });
+          }
+        ")
   })
   
   observe({
@@ -137,15 +157,6 @@ server <- shinyServer(function(input, output) {
                 # labFormat = myLabelFormat(dates = TRUE),
                 title = legend_title(), 
                 opacity = 0.8) %>%
-      htmlwidgets::onRender("
-        function(el, x) {
-          var labels = el.querySelectorAll('.info.legend text'); // 1
-          labels.forEach(function(label) {
-            label.setAttribute('text-anchor', 'start'); // 2
-            label.setAttribute('dx', '5'); // set left indentation [px]
-          });
-        }
-      ") %>%
       addImageQuery(reacRaster(),
                     digits = 2,
                     type = "click",
