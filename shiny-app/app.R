@@ -2,7 +2,7 @@
 # reached in the northeastern US
 
 # ER Zylstra
-# 16 Mar 2025
+# 21 Mar 2025
 
 library(lubridate)
 library(raster)
@@ -79,7 +79,9 @@ ui <- fluidPage(
         (AGDD) using the Baskerville-Emin method with a base temperature of 50 
         deg F, and identified the day of the year that each threshold was
         reached. The maps display the mean day of the year each threshold was
-        reached (or the standard deviation, SD) over the 30-year period.")
+        reached (or the standard deviation, SD) over the 30-year period. We 
+        excluded any locations where the threshold was reached in only one of 
+        the 30 years.")
 
     ), # end sidebarPanel
     
