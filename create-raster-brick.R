@@ -2,8 +2,9 @@
 # loading of the shiny app)
 
 # ER Zylstra
-# 20 Feb 2025
+# 21 March 2025
 
+library(dplyr)
 library(raster)
 library(leaflet)
 library(leafem)
@@ -29,15 +30,74 @@ for (i in 1:length(thresholds)) {
                                     thresholds[i], ".tiff"))
 }
 
-# PICK UP HERE ONCE WE'VE SORTED OUT THE COUNT/YEARS ISSUE ################
+# Explored mean, SD, and year count rasters in count-years-exploration.R
+# Upshot is that there can be 5 types of cells in rasters:
+# mean = NA, SD = NA, count = 0: outside area of interest 
+# mean = Inf, SD = NA, count = 0: cell reached threshold in 0 years
+# mean = value, SD = NA, count = 1: cell reached threshold in 1 year
+# mean = value, SD = 0, count > 1: cell reached same threshold every year it was reached
+# mean = value, SD = value, count > 1: cells reached different thresholds multiple years
 
-# Create RasterStacks, rename layers, and replace Inf values with NA
+# Create RasterBrick for each threshold, convert mean = Inf to mean = NA and 
+# convert cells in mean raster to NA when the threshold wasn't reached in at 
+# least X (min_years) years
+min_years <- 2
+
+# Commented code in loop below can be used to double-check that the raster
+# cell conversions were done correctly
+
+for (i in 1:length(thresholds)) {
+
+  comb <- brick(means_list[[i]], sds_list[[i]], counts_list[[i]])
+  
+  # orig_counts <- as.data.frame(comb) %>%
+  #   mutate(mean2 = case_when(
+  #     mean == Inf ~ "Inf",
+  #     is.na(mean) ~ "NA",
+  #     .default = "value"
+  #   )) %>%
+  #   mutate(sd2 = case_when(
+  #     is.na(sd) ~ "NA",
+  #     sd == 0 ~ "0",
+  #     .default = "value"
+  #   )) %>%
+  #   mutate(count2 = case_when(
+  #     count == 0 ~ "0",
+  #     count %in% 1 ~ "1",
+  #     count %in% 2:30 ~ "2:30",
+  #   )) %>%
+  #   count(mean2, sd2, count2)
+  
+  comb[[1]][comb[[1]] == Inf] <- NA
+  comb[[1]][comb[[3]] < min_years] <- NA
+  
+  # new_counts <- as.data.frame(comb) %>%
+  #   mutate(mean2 = case_when(
+  #     mean == Inf ~ "Inf",
+  #     is.na(mean) ~ "NA",
+  #     .default = "value"
+  #   )) %>%
+  #   mutate(sd2 = case_when(
+  #     is.na(sd) ~ "NA",
+  #     sd == 0 ~ "0",
+  #     .default = "value"
+  #   )) %>%
+  #   mutate(count2 = case_when(
+  #     count == 0 ~ "0",
+  #     count %in% 1 ~ "1",
+  #     count %in% 2:30 ~ "2:30",
+  #   )) %>%
+  #   count(mean2, sd2, count2)
+  
+  # Put mean raster back in list
+  means_list[[i]] <- comb[[1]]
+}
+
+# Create raster stack for each variable and rename layers
 means_rast <- stack(means_list)
 names(means_rast) <- paste0("mean_", thresholds)
-means_rast[means_rast == Inf] <- NA
 sds_rast <- stack(sds_list)
 names(sds_rast) <- paste0("sd_", thresholds)
-sds_rast[sds_rast == Inf] <- NA
 
 # Merge all rasters and convert to a RasterBrick
 all_rast <- stack(means_rast, sds_rast)
