@@ -1,6 +1,6 @@
 # Download daily temperature data and pin updated rasters
-# To be run daily in early morning
-# 27 March 2025
+# To be run daily
+# 28 March 2025
 
 library(rnpn)
 library(dplyr)
@@ -8,8 +8,16 @@ library(lubridate)
 library(pins)
 library(raster)
 library(terra)
+library(withr)
 
-# Download min and max temperatures (degC) for yesterday
+# Set pins board
+board <- board_connect(
+  auth = "manual",
+  server = Sys.getenv("CONNECT_SERVER"),
+  key = Sys.getenv("CONNECT_API_KEY")
+)
+
+# Download min and max temperatures (deg C) for yesterday
 yesterday <- Sys.Date() - 1
 tmin_download <- npn_download_geospatial(coverage_id = "climate:tmin",
                                          date = yesterday,
@@ -19,8 +27,8 @@ tmax_download <- npn_download_geospatial(coverage_id = "climate:tmax",
                                          format = "geotiff") 
 
 # Load shapefile with NECASC boundary
-roi <- terra::vect("shiny-app/Northeast_CASC/Northeast_CASC.shp") # Need to figure out relative/absolute paths
-roi <- terra::project(roi, tmin_download) # I think they're both epsg:4269, but just in case
+roi <- terra::vect("Northeast_CASC/Northeast_CASC.shp")
+# roi <- terra::project(roi, tmin_download) # Both in lat/long NAD83 (epsg:4269)
 tmin_roi <- terra::crop(tmin_download, roi, mask = TRUE)
 tmax_roi <- terra::crop(tmax_download, roi, mask = TRUE)
 
@@ -28,8 +36,7 @@ tmax_roi <- terra::crop(tmax_download, roi, mask = TRUE)
 tmin_roi <- tmin_roi * 9/5 + 32
 tmax_roi <- tmax_roi * 9/5 + 32
 
-# Function to calculated GDDs (from E. Scott)
-#' Baskerville-Emin method for GDD calculation
+#' Baskerville-Emin method for GDD calculation (function from E. Scott)
 #' 
 #' @param tmin Numeric vector; min daily temp in ºF.
 #' @param tmax Numeric vector; max daily temp in ºF.
@@ -84,15 +91,23 @@ gdd <- terra::lapp(temps_sds, function(x, y) {
   )
 })
 
-# If yesterday was Jan 1, then this layer becomes the first layer of new GDDs. 
+# Convert SpatRaster to Raster Layer
+# gdd <- raster::raster(gdd)
+
+# If Jan 1, then layer becomes the first layer of new GDDs. 
 # If not, append layer to GDDs.
 if (yday(yesterday) == 1) {
   GDDs <- gdd
 } else {
-  GDDs <- pin_read(GDDs)
+  GDDs_brick <- pin_read(board = board,
+                         name = "ezylstra/GDDs")
+  GDDs <- terra::rast(GDDs_brick)
   GDDs <- c(GDDs, gdd)
 }
-pin_write(GDDs)
+# Write to pin, as raster brick
+# pin_write(board = board,
+#           x = GDDs,
+#           name = "ezylstra/GDDs")
 
 # Calculate AGDD
 agdd <- cumsum(GDDs)
