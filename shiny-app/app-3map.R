@@ -1,5 +1,5 @@
-# Shiny app to explore when AGDD thresholds are met in the northeastern US: 
-# Mean day of the year (and SD) over 30-yr period as well as day in current year
+# Shiny app to explore what day of the year AGDD thresholds are met in the
+# northeastern US: 30-year mean and SD, as well as day in current year
 
 library(lubridate)
 library(dplyr)
@@ -8,6 +8,7 @@ library(terra)
 library(shiny)
 library(shinyjs)
 library(leaflet)
+library(leaflet.extras2)
 library(leafem)
 library(htmlwidgets)
 library(bslib)
@@ -84,21 +85,24 @@ ui <- page_fillable(
                        choices = c("Threshold" = "Threshold", "Pest" = "Pest")),
           selectInput(inputId = "threshold", 
                       label = "AGDD threshold:", 
-                      choices = unique(threshold_list)),
-          actionButton(inputId = "plot",
-                       label = "Plot", class = "btn btn-primary"),
-          sliderInput(inputId = "opacity",
-                      label = "Opacity:",
-                      min = 0,
-                      max = 1, 
-                      value = 0.8),
+                      choices = unique(threshold_list)), 
           selectInput(inputId = "pest",
                       label = "Species",
                       choices = unique(pests$spp)),
           selectInput("event", "Biological event", choices = NULL),
           selectInput("type", "Threshold type", choices = NULL),
-          col_widths = c(12, 2, 4, -4, 2, 2, 4, 4, 2),
-          row_heights = c(1, rep(4, 4), rep(4, 4))
+          actionButton(inputId = "plot",
+                       label = "Plot", class = "btn btn-primary"),
+          value_box(title = "Selected threshold",
+                    value = uiOutput("selected"),
+                    theme = "text-blue"),
+          sliderInput(inputId = "opacity",
+                      label = "Opacity:",
+                      min = 0,
+                      max = 1, 
+                      value = 0.8),          
+          col_widths = c(12, 2, 2, 3, 3, 2, 1, 2, -7, 2),
+          row_heights = c(1, rep(6, 5), rep(6, 4))
         )
       ),
       nav_panel("Methods",
@@ -129,7 +133,6 @@ ui <- page_fillable(
     card(card_header("Standard deviation"), leafletOutput("sd")),
     col_widths = c(12, 4, 4, 4),
     row_heights = c(2, 3, 3, 3)
-    # row_heights = c(1, 3, 3, 3)
 
   ) # end layout_columns
 ) # end page_fillable
@@ -249,7 +252,7 @@ server <- shinyServer(function(input, output, session) {
       disable("type")
     }
   })
-
+  
   # Execute after clicking Plot button
   observeEvent(input$plot, {
     req(input$method)
@@ -264,11 +267,15 @@ server <- shinyServer(function(input, output, session) {
       reacSD <- sds[[pests$layer[pests$spp %in% input$pest &
                                    pests$event %in% input$event &
                                    pests$type %in% input$type]]]
+      output$selected <- renderText({pests$threshold[pests$spp %in% input$pest &
+                                                       pests$event %in% input$event &
+                                                       pests$type %in% input$type]})
     } else {
       req(input$threshold)
       reacMean <- means[[paste0("t", input$threshold)]]
       reacDOY <- doys[[paste0("t", input$threshold)]]
       reacSD <- sds[[paste0("t", input$threshold)]]
+      output$selected <- renderText({input$threshold})
     }
 
     # Determine whether any locations have met threshold
@@ -294,7 +301,7 @@ server <- shinyServer(function(input, output, session) {
                      colors = pal_mean,
                      group = "Mean DOY",
                      layerId = "Mean DOY",
-                     opacity = 0.8,
+                     opacity = input$opacity,
                      project = FALSE) %>%
       addLegend("bottomright",
                 pal = pal_mean,
@@ -308,7 +315,8 @@ server <- shinyServer(function(input, output, session) {
                     position = "bottomleft",
                     prefix = "",
                     layerId = "Mean DOY",
-                    project = TRUE)  
+                    project = TRUE) %>%
+      addLeafletsync(c("mean", "doy", "sd"))
     
     if (!reacDOY_NA) {
       leafletProxy("doy") %>%
