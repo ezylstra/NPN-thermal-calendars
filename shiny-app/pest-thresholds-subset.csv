@@ -1,0 +1,35 @@
+spp,event,type,threshold
+American plum borer (Euzophera semifuneralis),"Adult flight, egg laying",Event start,250
+American plum borer (Euzophera semifuneralis),"Adult flight, egg laying",Event end,450
+American plum borer (Euzophera semifuneralis),"Adult flight, egg laying",Treatment start,250
+American plum borer (Euzophera semifuneralis),"Adult flight, egg laying",Treatment end,450
+American plum borer (Euzophera semifuneralis),2nd generation,Event start,1350
+American plum borer (Euzophera semifuneralis),2nd generation,Event end,1500
+Arborvitae leafminers (Argyresthia spp.),"Larvae in mines, 1st generation",Event start,250
+Arborvitae leafminers (Argyresthia spp.),"Larvae in mines, 1st generation",Event end,350
+Arborvitae leafminers (Argyresthia spp.),"Larvae in mines, 1st generation",Treatment start,150
+Arborvitae leafminers (Argyresthia spp.),"Larvae in mines, 1st generation",Treatment end,300
+Arborvitae leafminers (Argyresthia spp.),2nd generation,Event start,500
+Arborvitae leafminers (Argyresthia spp.),2nd generation,Event end,700
+Arborvitae leafminers (Argyresthia spp.),2nd generation,Treatment start,500
+Arborvitae leafminers (Argyresthia spp.),2nd generation,Treatment end,700
+Arborvitae leafminers (Argyresthia spp.),3rd generation,Event start,1700
+Arborvitae leafminers (Argyresthia spp.),3rd generation,Event end,2100
+Arborvitae leafminers (Argyresthia spp.),3rd generation,Treatment start,1800
+Arborvitae leafminers (Argyresthia spp.),3rd generation,Treatment end,2200
+Azalea leafminer (Caloptilia azaleela),larvae1,Treatment start,450
+Azalea leafminer (Caloptilia azaleela),larvae1,Treatment end,800
+Azalea leafminer (Caloptilia azaleela),larvae2,Treatment start,1250
+Azalea leafminer (Caloptilia azaleela),larvae2,Treatment end,1500
+Balsam twig aphid (Mindarus abientinus),egg hatch,Event start,50
+Balsam twig aphid (Mindarus abientinus),egg hatch,Event end,100
+Balsam twig aphid (Mindarus abientinus),egg hatch,Treament start,50
+Balsam twig aphid (Mindarus abientinus),egg hatch,Treatment end,150
+Balsam twig aphid (Mindarus abientinus),stem mothers present,Event start,100
+Balsam twig aphid (Mindarus abientinus),stem mothers present,Event end,150
+Balsam twig aphid (Mindarus abientinus),stem mothers present,Treament start,50
+Balsam twig aphid (Mindarus abientinus),stem mothers present,Treatment end,150
+Beech scale (Cryptococcus fagisuga),eggs present,Event,800
+Beech scale (Cryptococcus fagisuga),"egg hatch, first crawlers",Event,1250
+Birch skeletonizer (Buccalatrix canadensisella),N/A,Treatment start,1250
+Birch skeletonizer (Buccalatrix canadensisella),N/A,Treatment end,1600
