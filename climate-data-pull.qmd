@@ -244,6 +244,23 @@ names(threshold_doys) <- thresholds
 # threshold_doys[is.na(threshold_doys) & !is.na(agdd[[1]])] <- Inf
 ```
 
+```{r anomalies}
+#| message: false
+
+# Load rasters with mean day-of-year each threshold was reached (1991-2020)
+means <- pin_read(board = board, "ezylstra/means")
+means <- terra::unwrap(means)
+
+# Resample mean rasters to have the same geometry as threshold maps
+means <- terra::resample(means, threshold_doys)
+
+# Calculate anomalies (current DOY - mean DOY)
+currentmeans <- terra::sds(threshold_doys, means)
+anomalies <- terra::lapp(currentmeans, function(x, y) {x - y})
+# Positive values = reached threshold later than normal
+# Negative values = reached threshold earlier than normal
+```
+
 ```{r save}
 #| warning: false
 
@@ -253,6 +270,13 @@ pin_write(board = board,
           x = threshold_doys,
           type = "qs",
           name = "ezylstra/current-doys")
+
+# Pin new anomaly rasters
+anomalies <- terra::wrap(anomalies)
+pin_write(board = board,
+          x = anomalies,
+          type = "qs",
+          name = "ezylstra/anomalies")
 
 # Pin new GDD rasters
 GDDs <- terra::wrap(GDDs)
