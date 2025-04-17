@@ -18,8 +18,8 @@ library(shinyjs)
 library(pins)
 library(qs)
   # library(shinycssloaders) 
-  # Wanted to use this to have busy indicators as raster
-  # loads, but it doesn't seem to work with leafletProxy()
+  # Wanted to use withSpinner() to have busy indicators when raster images
+  # load, but it doesn't seem to work with leafletProxy()
 
 # Note: using raster instead of terra since terra doesn't seem to play nice with 
 # leafem::addImageQuery()
@@ -97,8 +97,10 @@ ui <- page_sidebar(
   sidebar = sidebar(
     navset_tab(
       nav_panel("Settings",
+                HTML("<br>"),
                 radioButtons("method", "Selection method",
-                             choices = c("Threshold" = "Threshold", "Pest" = "Pest")),
+                             choices = c("Threshold" = "Threshold", "Pest" = "Pest"),
+                             inline = TRUE),
                 uiOutput("selections"),
                 HTML("<br><br>"),
                 sliderInput(inputId = "opacity",
@@ -134,22 +136,27 @@ ui <- page_sidebar(
   ),
   
   accordion(
-    open = c(HTML("<b>Current year anomaly</b>")),
+    id = "accordion",
+    open = TRUE,
+    # open = c(HTML("<b>Current year anomaly</b>")),
     accordion_panel(
-      HTML("<b>Current year anomaly</b>"),
-      leafletOutput("anom") 
-      # %>% withSpinner(color= "#0dc5c1")
+      title = HTML("<b>Current year anomaly</b>"),
+      value = "panel_anom",
+      leafletOutput("anom")
     ),
     accordion_panel(
-      HTML("<b>Current day of year</b>"),
+      title = HTML("<b>Current day of year</b>"),
+      value = "panel_doy",
       leafletOutput("doy")
     ),
     accordion_panel(
-      HTML("<b>Mean day of year</b>"),
+      title = HTML("<b>Mean day of year</b>"),
+      value = "panel_mean",
       leafletOutput("mean")
     ),
     accordion_panel(
-      HTML("<b>Standard deviation</b>"),
+      title = HTML("<b>Standard deviation</b>"),
+      value = "panel_sd",
       leafletOutput("sd")
     )
   )
@@ -373,13 +380,22 @@ server <- shinyServer(function(input, output, session) {
     reacDOY_NA <- ifelse(ncell(reacDOY) == freq(reacDOY, value = NA), 
                          TRUE, FALSE)
     
-    # # Add note to Current DOY panel if no locations have reached threshold yet
-    # output$doy_header <- renderText({
-    #   ifelse(reacDOY_NA == TRUE,
-    #          "Current day of year - NO LOCATIONS REACHED THRESHOLD YET",
-    #          "Current day of year")
-    # })
-    
+    if (reacDOY_NA == TRUE) {
+      accordion_panel_update(id = "accordion", 
+                             target = "panel_anom",
+                             title = HTML("<b>Current year anomaly - NO LOCATIONS REACHED THRESHOLD THIS YEAR</b>"))
+      accordion_panel_update(id = "accordion", 
+                             target = "panel_doy",
+                             title = HTML("<b>Current day of year - NO LOCATIONS REACHED THRESHOLD THIS YEAR</b>"))
+    } else {
+      accordion_panel_update(id = "accordion", 
+                             target = "panel_anom",
+                             title = HTML("<b>Current year anomaly</b>"))
+      accordion_panel_update(id = "accordion", 
+                             target = "panel_doy",
+                             title = HTML("<b>Current day of year</b>"))
+    }
+
     # Create color scale for each DOY and SD maps
     pal_mean <- colorNumeric(palette = "viridis",
                              domain = c(values(reacMean), values(reacDOY)),
@@ -412,7 +428,7 @@ server <- shinyServer(function(input, output, session) {
                     position = "bottomleft",
                     prefix = "",
                     layerId = "Mean DOY",
-                    project = TRUE)  %>%
+                    project = TRUE) %>%
       addLeafletsync(c("anom", "doy", "mean", "sd"))
     
     leafletProxy("sd") %>%
@@ -437,8 +453,8 @@ server <- shinyServer(function(input, output, session) {
                     prefix = "",
                     layerId = "SD",
                     project = TRUE) %>%
-      addLeafletsync(c("anom", "doy", "mean", "sd"))
-    
+      addLeafletsync(c("anom", "doy", "mean", "sd")) 
+
     if (!reacDOY_NA) {
       leafletProxy("doy") %>%
         clearImages() %>%
@@ -466,7 +482,7 @@ server <- shinyServer(function(input, output, session) {
     } else {
       leafletProxy("doy") %>%
         clearImages() %>%
-        clearControls()  %>%
+        clearControls() %>%
         addLeafletsync(c("anom", "doy", "mean", "sd"))
     }
     
@@ -504,7 +520,17 @@ server <- shinyServer(function(input, output, session) {
         clearControls() %>%
         addLeafletsync(c("anom", "doy", "mean", "sd"))
     }
+    accordion_panel_close(id = "accordion", 
+                          values = c("panel_doy", "panel_mean", "panel_sd"))
+    
   }) # end observe
+  
+  # Wanted to use this so that we could start with just the first panel open,
+  # but using these commands messes up the zoom sync. 
+    # outputOptions(output, "doy", suspendWhenHidden = FALSE)
+    # outputOptions(output, "mean", suspendWhenHidden = FALSE)
+    # outputOptions(output, "sd", suspendWhenHidden = FALSE)
+  
 }) # end server
 
 # run app ---------------------------------------------------------------------#
