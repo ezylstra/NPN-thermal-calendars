@@ -135,7 +135,7 @@ ui <- page_sidebar(
 
   accordion(
     id = "accordion",
-    open = TRUE,
+    open = TRUE, # All panels have to be open when app starts
     accordion_panel(
       title = HTML("<b>Current year anomaly</b>"),
       value = "panel_anom",
@@ -414,6 +414,7 @@ server <- shinyServer(function(input, output, session) {
     leafletProxy("mean") %>%
       clearImages() %>%
       clearControls() %>%
+      fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
       addRasterImage(reacMean,
                      colors = pal_mean,
                      group = "Mean DOY",
@@ -438,6 +439,7 @@ server <- shinyServer(function(input, output, session) {
     leafletProxy("sd") %>%
       clearImages() %>%
       clearControls() %>%
+      fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
       addRasterImage(reacSD, 
                      colors = pal_sd, 
                      group = "SD",
@@ -463,6 +465,7 @@ server <- shinyServer(function(input, output, session) {
       leafletProxy("doy") %>%
         clearImages() %>%
         clearControls() %>%
+        fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
         addRasterImage(reacDOY, 
                        colors = pal_mean, 
                        group = "Current DOY",
@@ -487,6 +490,7 @@ server <- shinyServer(function(input, output, session) {
       leafletProxy("doy") %>%
         clearImages() %>%
         clearControls() %>%
+        fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
         addLeafletsync(c("anom", "doy", "mean", "sd"))
     }
     
@@ -498,6 +502,7 @@ server <- shinyServer(function(input, output, session) {
       leafletProxy("anom") %>%
         clearImages() %>%
         clearControls() %>%
+        fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
         addRasterImage(reacAnom, 
                        colors = pal_anom, 
                        group = "Anomaly (negative = early; positive = late)",
@@ -522,6 +527,7 @@ server <- shinyServer(function(input, output, session) {
       leafletProxy("anom") %>%
         clearImages() %>%
         clearControls() %>%
+        fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
         addLeafletsync(c("anom", "doy", "mean", "sd"))
     }
     
