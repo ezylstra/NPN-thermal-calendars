@@ -189,8 +189,9 @@ server <- shinyServer(function(input, output, session) {
                                choices = c(unique(threshold_list), ""),
                                selected = "")
     output[[2]] <- actionButton(inputId = "plot",
-                                label = "Plot", 
-                                class = "btn btn-primary")
+                                label = "Plot",
+                                class = "btn btn-primary",
+                                disabled = TRUE)
     output
   }
   
@@ -217,6 +218,14 @@ server <- shinyServer(function(input, output, session) {
                                 disabled = TRUE)
     output  
   }
+  
+  # Select threshold directly
+  observeEvent(input$threshold, {
+    threshold(input$threshold)
+    if (input$threshold != "") {
+      updateActionButton(input = "plot", disabled = FALSE)
+    }
+  })
   
   # When selecting a new pest, create choices for Event input and clear other
   # type dropdown and selected threshold box
@@ -366,9 +375,6 @@ server <- shinyServer(function(input, output, session) {
   # Execute after clicking Plot button
   observeEvent(input$plot, {
     
-    if (input$method == "Threshold") {
-      threshold(input$threshold)
-    }
     reacAnom <- anoms[[paste0("t", threshold())]]
     reacDOY <- doys[[paste0("t", threshold())]]    
     reacMean <- means[[paste0("t", threshold())]]
@@ -524,13 +530,6 @@ server <- shinyServer(function(input, output, session) {
                           values = c("panel_doy", "panel_mean", "panel_sd"))
     
   }) # end observe
-  
-  # Wanted to use this so that we could start with just the first panel open,
-  # but using these commands messes up the zoom sync. 
-    # outputOptions(output, "doy", suspendWhenHidden = FALSE)
-    # outputOptions(output, "mean", suspendWhenHidden = FALSE)
-    # outputOptions(output, "sd", suspendWhenHidden = FALSE)
-  
 }) # end server
 
 # run app ---------------------------------------------------------------------#
