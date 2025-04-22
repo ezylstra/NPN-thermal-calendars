@@ -496,7 +496,7 @@ server <- shinyServer(function(input, output, session) {
     
     if (!reacDOY_NA) {
       color_limit <- max(abs(range(values(reacAnom), na.rm = TRUE)))
-      pal_anom <- colorNumeric(palette = "Spectral",
+      pal_anom <- colorNumeric(palette = "RdYlBu",
                                domain = c(-color_limit, color_limit),
                                na.color = "transparent")
       leafletProxy("anom") %>%
