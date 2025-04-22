@@ -1,8 +1,8 @@
-# App to display rasters with mean day-of-year (or SD) that AGDD thresholds are
-# reached in the northeastern US - accordion maps w/ sidebar
+# App to display AGDD threshold rasters (current DOY & anomaly; 30-year mean
+# DOY & SD)
 
 # ER Zylstra
-# 15 April 2025
+# 22 April 2025
 
 library(dplyr)
 library(lubridate)
@@ -17,9 +17,6 @@ library(bslib)
 library(shinyjs)
 library(pins)
 library(qs)
-  # library(shinycssloaders) 
-  # Wanted to use withSpinner() to have busy indicators when raster images
-  # load, but it doesn't seem to work with leafletProxy()
 
 # Note: using raster instead of terra since terra doesn't seem to play nice with 
 # leafem::addImageQuery()
@@ -63,7 +60,7 @@ names(means) <- paste0("t", threshold_list)
 sds <- mean_sd[[51:100]]
 names(sds) <- paste0("t", threshold_list)
 
-# Modify function used to format legend labels so we can add dates
+# Modify function used to format legend labels, accomodating dates & anomalies
 myLabelFormat <- function(..., dates = FALSE, anomalies = FALSE){ 
   if (dates) { 
     function(type = "numeric", cuts) { 
@@ -90,19 +87,20 @@ myLabelFormat <- function(..., dates = FALSE, anomalies = FALSE){
 ui <- page_sidebar(
   
   useShinyjs(),
-  
+
   title = "What day of the year do locations in the northeastern U.S. reach 
              accumulated heat thresholds?",
   
   sidebar = sidebar(
     navset_tab(
       nav_panel("Settings",
-                HTML("<br>"),
+                br(),
                 radioButtons("method", "Selection method",
                              choices = c("Threshold" = "Threshold", "Pest" = "Pest"),
                              inline = TRUE),
                 uiOutput("selections"),
-                HTML("<br><br>"),
+                br(),
+                br(),
                 sliderInput(inputId = "opacity",
                             label = "Opacity:",
                             min = 0,
@@ -132,13 +130,12 @@ ui <- page_sidebar(
                     with a base temperature of 50 deg F.")  
       )
     ),
-    width = "27%"
+    width = "25%"
   ),
-  
+
   accordion(
     id = "accordion",
     open = TRUE,
-    # open = c(HTML("<b>Current year anomaly</b>")),
     accordion_panel(
       title = HTML("<b>Current year anomaly</b>"),
       value = "panel_anom",
@@ -189,7 +186,8 @@ server <- shinyServer(function(input, output, session) {
     output <- tagList()
     output[[1]] <- selectInput(inputId = "threshold", 
                                label = "AGDD threshold:", 
-                               choices = unique(threshold_list))
+                               choices = c(unique(threshold_list), ""),
+                               selected = "")
     output[[2]] <- actionButton(inputId = "plot",
                                 label = "Plot", 
                                 class = "btn btn-primary")
@@ -266,25 +264,25 @@ server <- shinyServer(function(input, output, session) {
       fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
       addTiles() %>%
       htmlwidgets::onRender("
-          function(el, x) {
-            const observer = new MutationObserver(function(mutations) {
-              mutations.forEach(function(mutation) {
-                if (mutation.addedNodes.length > 0) {
-                  var labels = el.querySelectorAll('.info.legend text'); // 1 Find all legend text elements as before
-                  if (labels.length > 0) {
-                    //console.log('Applying text alignment to', labels.length, 'legend labels');
-                    labels.forEach(function(label) {
-                      label.setAttribute('text-anchor', 'start'); // 2
-                      label.setAttribute('dx', '5');
-                    });
-                  }
+        function(el, x) {
+          const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+              if (mutation.addedNodes.length > 0) {
+                var labels = el.querySelectorAll('.info.legend text'); // 1 Find all legend text elements as before
+                if (labels.length > 0) {
+                  //console.log('Applying text alignment to', labels.length, 'legend labels');
+                  labels.forEach(function(label) {
+                    label.setAttribute('text-anchor', 'start'); // 2
+                    label.setAttribute('dx', '5');
+                  });
                 }
-              });
+              }
             });
-            // 3 observing the entire map container el for changes
-            observer.observe(el, { childList: true, subtree: true });
-          }
-        ")
+          });
+          // 3 observing the entire map container el for changes
+          observer.observe(el, { childList: true, subtree: true });
+        }
+      ")
   })
 
   output$doy <- renderLeaflet({
@@ -292,25 +290,25 @@ server <- shinyServer(function(input, output, session) {
       fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
       addTiles() %>%
       htmlwidgets::onRender("
-          function(el, x) {
-            const observer = new MutationObserver(function(mutations) {
-              mutations.forEach(function(mutation) {
-                if (mutation.addedNodes.length > 0) {
-                  var labels = el.querySelectorAll('.info.legend text'); // 1 Find all legend text elements as before
-                  if (labels.length > 0) {
-                    //console.log('Applying text alignment to', labels.length, 'legend labels');
-                    labels.forEach(function(label) {
-                      label.setAttribute('text-anchor', 'start'); // 2
-                      label.setAttribute('dx', '5');
-                    });
-                  }
+        function(el, x) {
+          const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+              if (mutation.addedNodes.length > 0) {
+                var labels = el.querySelectorAll('.info.legend text'); // 1 Find all legend text elements as before
+                if (labels.length > 0) {
+                  //console.log('Applying text alignment to', labels.length, 'legend labels');
+                  labels.forEach(function(label) {
+                    label.setAttribute('text-anchor', 'start'); // 2
+                    label.setAttribute('dx', '5');
+                  });
                 }
-              });
+              }
             });
-            // 3 observing the entire map container el for changes
-            observer.observe(el, { childList: true, subtree: true });
-          }
-        ")
+          });
+          // 3 observing the entire map container el for changes
+          observer.observe(el, { childList: true, subtree: true });
+        }
+      ")
   })
   
   output$mean <- renderLeaflet({
@@ -318,25 +316,25 @@ server <- shinyServer(function(input, output, session) {
       fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
       addTiles() %>%
       htmlwidgets::onRender("
-          function(el, x) {
-            const observer = new MutationObserver(function(mutations) {
-              mutations.forEach(function(mutation) {
-                if (mutation.addedNodes.length > 0) {
-                  var labels = el.querySelectorAll('.info.legend text'); // 1 Find all legend text elements as before
-                  if (labels.length > 0) {
-                    //console.log('Applying text alignment to', labels.length, 'legend labels');
-                    labels.forEach(function(label) {
-                      label.setAttribute('text-anchor', 'start'); // 2
-                      label.setAttribute('dx', '5');
-                    });
-                  }
+        function(el, x) {
+          const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+              if (mutation.addedNodes.length > 0) {
+                var labels = el.querySelectorAll('.info.legend text'); // 1 Find all legend text elements as before
+                if (labels.length > 0) {
+                  //console.log('Applying text alignment to', labels.length, 'legend labels');
+                  labels.forEach(function(label) {
+                    label.setAttribute('text-anchor', 'start'); // 2
+                    label.setAttribute('dx', '5');
+                  });
                 }
-              });
+              }
             });
-            // 3 observing the entire map container el for changes
-            observer.observe(el, { childList: true, subtree: true });
-          }
-        ")
+          });
+          // 3 observing the entire map container el for changes
+          observer.observe(el, { childList: true, subtree: true });
+        }
+      ")
   })
   
   output$sd <- renderLeaflet({
@@ -344,25 +342,25 @@ server <- shinyServer(function(input, output, session) {
       fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
       addTiles() %>%
       htmlwidgets::onRender("
-          function(el, x) {
-            const observer = new MutationObserver(function(mutations) {
-              mutations.forEach(function(mutation) {
-                if (mutation.addedNodes.length > 0) {
-                  var labels = el.querySelectorAll('.info.legend text'); // 1 Find all legend text elements as before
-                  if (labels.length > 0) {
-                    //console.log('Applying text alignment to', labels.length, 'legend labels');
-                    labels.forEach(function(label) {
-                      label.setAttribute('text-anchor', 'start'); // 2
-                      label.setAttribute('dx', '5');
-                    });
-                  }
+        function(el, x) {
+          const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+              if (mutation.addedNodes.length > 0) {
+                var labels = el.querySelectorAll('.info.legend text'); // 1 Find all legend text elements as before
+                if (labels.length > 0) {
+                  //console.log('Applying text alignment to', labels.length, 'legend labels');
+                  labels.forEach(function(label) {
+                    label.setAttribute('text-anchor', 'start'); // 2
+                    label.setAttribute('dx', '5');
+                  });
                 }
-              });
+              }
             });
-            // 3 observing the entire map container el for changes
-            observer.observe(el, { childList: true, subtree: true });
-          }
-        ")
+          });
+          // 3 observing the entire map container el for changes
+          observer.observe(el, { childList: true, subtree: true });
+        }
+      ")
   })
   
   # Execute after clicking Plot button
@@ -453,7 +451,7 @@ server <- shinyServer(function(input, output, session) {
                     prefix = "",
                     layerId = "SD",
                     project = TRUE) %>%
-      addLeafletsync(c("anom", "doy", "mean", "sd")) 
+      addLeafletsync(c("anom", "doy", "mean", "sd"))
 
     if (!reacDOY_NA) {
       leafletProxy("doy") %>%
@@ -520,7 +518,9 @@ server <- shinyServer(function(input, output, session) {
         clearControls() %>%
         addLeafletsync(c("anom", "doy", "mean", "sd"))
     }
-    accordion_panel_close(id = "accordion", 
+    
+    # Close all panels except anomaly
+    accordion_panel_close(id = "accordion",
                           values = c("panel_doy", "panel_mean", "panel_sd"))
     
   }) # end observe
