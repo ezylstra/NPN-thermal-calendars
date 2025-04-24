@@ -2,7 +2,7 @@
 # DOY & SD)
 
 # ER Zylstra
-# 23 April 2025
+# 24 April 2025
 
 library(dplyr)
 library(lubridate)
@@ -126,13 +126,12 @@ ui <- page_sidebar(
     navset_tab(
       nav_panel("Settings",
                 br(),
-                p("Begin by selecting whether to choose an AGDD threshold directly 
-                  or indirectly, by identifying a pest species, biological event, 
-                  and threshold type of interest. After selecting the options of 
-                  interest (and clicking “Update threshold” if selecting a pest 
-                  species), click the Plot button to view maps. Clicking on a 
-                  map will provide the value at that location in the lower left 
-                  corner of the map."),
+                p("Begin by selecting whether to choose an AGDD threshold 
+                  directly or indirectly by identifying a pest species. After 
+                  selecting the options of interest (and clicking “Update 
+                  threshold” if selecting a pest species), click the Plot button 
+                  to view maps. Clicking on a map will provide the value at that 
+                  location in the lower left corner of the map."),
                 radioButtons("method", "Selection method",
                              choices = c("Threshold" = "Threshold", 
                                          "Pest" = "Pest"),
@@ -177,26 +176,38 @@ ui <- page_sidebar(
                 ),
                 br(),
                 p("This project was supported by the Northeast Climate Adapation
-                  Science Center and the USA National Phenology Network."),
-                div(style = "text-align: center;",
-                    img(src = "NECASClogo.png", height = "75%", width = "75%"),
-                    img(src = "NPNlogo.png", height = "50%", width = "50%")
-                )
+                  Science Center, the USA National Phenology Network, the
+                  University of Arizona, and the U.S. Forest Service."),
+                div(
+                  style = "text-align: center;",
+                  img(src = "NECASClogo.png", height = "75%", width = "75%")
+                ),
+                div(
+                  style = "display: inline-flex; justify-content: space-evenly; align-items: center;",
+                  img(src = "NPNlogo.png", height = "50%", width = "50%"),
+                  img(src = "UAlogo.png", height = "25%", width = "25%")
+                ),
+                br(),
+                br(),
+                p("The code to run this website is available at ... For more 
+                  information contact...")
       ),
       nav_panel("Methods",
                 br(),
                 p(strong("Mean day of year and standard deviation (SD) maps: "),
                   "For each year from 1991-2020, we obtained daily minimum and 
                   maximum temperatures for the Northeastern U.S. at 4-km resolution 
-                  from the PRISM Climate Group (Oregon State University, 
-                  https://prism.oregonstate.edu). We used these data to calculate 
-                  AGDD using the Baskerville-Emin method with a base temperature 
-                  of 50 deg F, and identified the day of the year that each 
-                  threshold was reached. The maps display the mean day of the 
-                  year each threshold was reached (or the standard deviation, 
-                  SD) over the 30-year period. We excluded any locations where 
-                  the threshold was reached in only of the 30 years."),
-                p(strong("Current day of year and anomaly: "),
+                  from the PRISM Climate Group (Oregon State University, ",
+                  a(href = "https://prism.oregonstate.edu", 
+                    "https://prism.oregonstate.edu", .noWS = "after"),
+                  "). We used these data to calculate AGDD using the 
+                  Baskerville-Emin method with a base temperature of 50 deg F, 
+                  and identified the day of the year that each threshold was 
+                  reached. The maps display the mean day of the year each 
+                  threshold was reached (or the standard deviation, SD) over the 
+                  30-year period. We excluded any locations where the threshold 
+                  was reached in only of the 30 years."),
+                p(strong("Current day of year and anomaly maps: "),
                   "We obtained daily minimum and maximum temperatures for the 
                   Northeastern U.S. for the current calendar year through 
                   yesterday from PRISM. We used the same methods described above 
