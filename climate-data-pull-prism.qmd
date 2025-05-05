@@ -14,6 +14,7 @@ library(maps)
 library(dplyr)
 library(lubridate)
 library(stringr)
+library(tibble)
 library(pins)
 library(qs)
 library(sf)
@@ -120,7 +121,7 @@ calc_gdd_be <- function(tmin = NULL, tmax = NULL, base = 32) {
 
 # Get yesterday's date
 # yesterday <- Sys.Date() - 1
-yesterday <- as.Date("2025-01-01")
+yesterday <- as.Date("2025-01-05")
 
 # Sequence of current-year dates through yesterday
 dates <- seq.Date(as.Date(paste0(year(yesterday), "-01-01")), yesterday, by = 1)
@@ -161,12 +162,17 @@ if (need_yest_only == FALSE & up_to_date == FALSE) {
     
     # Read files in as SpatRasters
     date_nodash <- str_remove_all(dates[i], "-")
-    tmin_file <- paste0(prism_folder, "/PRISM_tmin_early_4kmD2_", 
-                        date_nodash, "_bil/PRISM_tmin_early_4kmD2_",
-                        date_nodash, "_bil.bil")
-    tmax_file <- paste0(prism_folder, "/PRISM_tmax_early_4kmD2_", 
-                        date_nodash, "_bil/PRISM_tmax_early_4kmD2_",
-                        date_nodash, "_bil.bil")
+    tfolders <- list.files(path = prism_folder, pattern = date_nodash, include.dirs = TRUE)
+    tmin_folder <- str_subset(tfolders, pattern = "tmin")
+    tmin_files <- list.files(path = paste0(prism_folder, "/", tmin_folder), full.names = TRUE)
+    tmin_file <- tibble(tmin_files) %>%
+      filter(str_sub(tmin_files, -7) == "bil.bil") %>%
+      pull(tmin_files)
+    tmax_folder <- str_subset(tfolders, pattern = "tmax")
+    tmax_files <- list.files(path = paste0(prism_folder, "/", tmax_folder), full.names = TRUE)
+    tmax_file <- tibble(tmax_files) %>%
+      filter(str_sub(tmax_files, -7) == "bil.bil") %>%
+      pull(tmax_files)
     tmin <- terra::rast(tmin_file)
     tmax <- terra::rast(tmax_file)
     
@@ -211,12 +217,17 @@ if (need_yest_only == FALSE & up_to_date == FALSE) {
     
     # Read files in as SpatRasters
     date_nodash <- str_remove_all(yesterday, "-")
-    tmin_file <- paste0(prism_folder, "/PRISM_tmin_early_4kmD2_", 
-                        date_nodash, "_bil/PRISM_tmin_early_4kmD2_",
-                        date_nodash, "_bil.bil")
-    tmax_file <- paste0(prism_folder, "/PRISM_tmax_early_4kmD2_", 
-                        date_nodash, "_bil/PRISM_tmax_early_4kmD2_",
-                        date_nodash, "_bil.bil")
+    tfolders <- list.files(path = prism_folder, pattern = date_nodash, include.dirs = TRUE)
+    tmin_folder <- str_subset(tfolders, pattern = "tmin")
+    tmin_files <- list.files(path = paste0(prism_folder, "/", tmin_folder), full.names = TRUE)
+    tmin_file <- tibble(tmin_files) %>%
+      filter(str_sub(tmin_files, -7) == "bil.bil") %>%
+      pull(tmin_files)
+    tmax_folder <- str_subset(tfolders, pattern = "tmax")
+    tmax_files <- list.files(path = paste0(prism_folder, "/", tmax_folder), full.names = TRUE)
+    tmax_file <- tibble(tmax_files) %>%
+      filter(str_sub(tmax_files, -7) == "bil.bil") %>%
+      pull(tmax_files)
     tmin <- terra::rast(tmin_file)
     tmax <- terra::rast(tmax_file)
     
@@ -252,9 +263,13 @@ names(GDDs) <- paste0("d", dates)
 # Calculate AGDD
 agdd <- cumsum(GDDs)
 
+# Load rasters with mean day-of-year each threshold was reached (1991-2020)
+means <- pin_read(board = board, "ezylstra/means")
+means <- terra::unwrap(means)
+
 # Re-project to CRS that's needed for Leaflet (to ensure DOY is whole number)
 # (see leaflet::projectRasterForLeaflet)
-agdd <- terra::project(agdd, "epsg:3857")
+agdd <- terra::project(agdd, means[[1]])
 
 # For each threshold, determine what day of the year the threshold was reached
 thresholds <- seq(50, 2500, by = 50)
@@ -275,14 +290,6 @@ names(threshold_doys) <- thresholds
 ```{r anomalies}
 #| message: false
 
-# Load rasters with mean day-of-year each threshold was reached (1991-2020)
-means <- pin_read(board = board, "ezylstra/means")
-means <- terra::unwrap(means)
-
-# Resample mean rasters to have the same geometry as threshold maps
-means <- terra::resample(means, threshold_doys)
-#### See whether this step is needed....
-
 # Calculate anomalies (current DOY - mean DOY)
 currentmeans <- terra::sds(threshold_doys, means)
 anomalies <- terra::lapp(currentmeans, function(x, y) {x - y})
@@ -298,21 +305,21 @@ threshold_doys <- terra::wrap(threshold_doys)
 pin_write(board = board,
           x = threshold_doys,
           type = "qs",
-          name = "ezylstra/current-doys")
+          name = "ezylstra/current-doys-prism")
 
 # Pin new anomaly rasters
 anomalies <- terra::wrap(anomalies)
 pin_write(board = board,
           x = anomalies,
           type = "qs",
-          name = "ezylstra/anomalies")
+          name = "ezylstra/anomalies-prism")
 
 # Pin new GDD rasters
 GDDs <- terra::wrap(GDDs)
 pin_write(board = board,
           x = GDDs,
           type = "qs",
-          name = "ezylstra/GDDs")
+          name = "ezylstra/GDDs-prism")
 
 # Delete temporary folder
 unlink(prism_folder, recursive = TRUE)
