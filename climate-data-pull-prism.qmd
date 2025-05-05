@@ -118,10 +118,10 @@ calc_gdd_be <- function(tmin = NULL, tmax = NULL, base = 32) {
 ```
 
 ```{r get-data}
+#| output: false
 
 # Get yesterday's date
-# yesterday <- Sys.Date() - 1
-yesterday <- as.Date("2025-01-05")
+yesterday <- Sys.Date() - 1
 
 # Sequence of current-year dates through yesterday
 dates <- seq.Date(as.Date(paste0(year(yesterday), "-01-01")), yesterday, by = 1)

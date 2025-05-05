@@ -1,0 +1,14 @@
+name: climate-data-pull-prism
+title: climate-data-pull-prism
+username: ezylstra
+account: ezylstra
+server: viz.datascience.arizona.edu
+hostUrl: https://viz.datascience.arizona.edu/__api__
+appId: 1238
+bundleId: 6801
+url: https://viz.datascience.arizona.edu:443/content/6748e19b-8eea-40b2-807d-085a32e3bbb2/
+version: 1
+quarto_version: 1.5.57
+quarto_engines: knitr
+asMultiple: FALSE
+asStatic: FALSE
