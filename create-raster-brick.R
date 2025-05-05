@@ -2,7 +2,7 @@
 # loading of the shiny app)
 
 # ER Zylstra
-# 21 March 2025
+# 5 May 2025
 
 library(dplyr)
 library(raster)
@@ -12,9 +12,8 @@ library(leafem)
 # Note: using raster instead of terra for this project since terra doesn't seem 
 # to play nice with leafem::addImageQuery()
 
-# Load file that lists summary statistics and thresholds
-params <- read.csv("shiny-app/parameters.csv")
-thresholds <- sort(unique(params$threshold))
+# List of thresholds
+thresholds <- seq(50, 2500, by = 50)
 
 # Load rasters into a list 
 means_list <- list()
@@ -47,7 +46,7 @@ min_years <- 2
 # cell conversions were done correctly
 
 for (i in 1:length(thresholds)) {
-
+  
   comb <- brick(means_list[[i]], sds_list[[i]], counts_list[[i]])
   
   # orig_counts <- as.data.frame(comb) %>%
@@ -116,7 +115,7 @@ all_rast <- projectRaster(all_rast, raster::projectExtent(all_rast,
 writeRaster(all_rast, 
             filename = "shiny-app/mean-sd-brick", 
             format = "GTiff", 
-            overwrite = TRUE, 
+            overwrite = TRUE,
             options = c("INTERLEAVE = BAND", "COMPRESS = LZW"))
 
 # Test run with leaflet -------------------------------------------------------#

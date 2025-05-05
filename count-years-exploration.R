@@ -4,9 +4,8 @@ library(ggplot2)
 library(tidyterra)
 library(cowplot)
 
-# Load file that lists summary statistics and thresholds
-params <- read.csv("shiny-app/parameters.csv")
-thresholds <- sort(unique(params$threshold))
+# List of thresholds
+thresholds <- seq(50, 2500, by = 50)
 
 # Load rasters into a list 
 means_list <- list()
