@@ -9,7 +9,7 @@ editor: visual
 #| warning: false
 
 library(here)
-library(prism)
+library(httr2)
 library(maps)
 library(dplyr)
 library(lubridate)
@@ -20,6 +20,7 @@ library(qs)
 library(sf)
 library(terra)
 terraOptions(progress = 0)
+options(httr2_progress = FALSE)
 
 board <- board_connect(
   auth = "manual",
@@ -27,9 +28,12 @@ board <- board_connect(
   key = Sys.getenv("CONNECT_API_KEY")
 )
 
-# Set file path for prism data
-prism_folder <- paste0(here::here(), "/prismtmp")
-prism_set_dl_dir(prism_folder)
+# Create folder to hold temporary prism data
+prism_folder <- paste0(here::here(), "/prismtmp/")
+dir.create(prism_folder)
+
+# Base URL for PRISM Web Service (see https://www.prism.oregonstate.edu/downloads/)
+url_base <- "https://services.nacse.org/prism/data/get/us/4km"
 ```
 
 ```{r roi}
@@ -152,38 +156,52 @@ if (need_yest_only == FALSE & up_to_date == FALSE) {
     
     # message(paste0("Calculating GDD for ", dates[i]))
   
-    # Download min and max temperatures (ºC)
-    tmin_download <- get_prism_dailys(type = "tmin", 
-                                      dates = dates[i],
-                                      keepZip = FALSE)
-    tmax_download <- get_prism_dailys(type = "tmax", 
-                                      dates = dates[i],
-                                      keepZip = FALSE)
-    
-    # Read files in as SpatRasters
+    # Date without dashes
     date_nodash <- str_remove_all(dates[i], "-")
-    tfolders <- list.files(path = prism_folder, pattern = date_nodash, include.dirs = TRUE)
-    tmin_folder <- str_subset(tfolders, pattern = "tmin")
-    tmin_files <- list.files(path = paste0(prism_folder, "/", tmin_folder), full.names = TRUE)
-    tmin_file <- tibble(tmin_files) %>%
-      filter(str_sub(tmin_files, -7) == "bil.bil") %>%
-      pull(tmin_files)
-    tmax_folder <- str_subset(tfolders, pattern = "tmax")
-    tmax_files <- list.files(path = paste0(prism_folder, "/", tmax_folder), full.names = TRUE)
-    tmax_file <- tibble(tmax_files) %>%
-      filter(str_sub(tmax_files, -7) == "bil.bil") %>%
-      pull(tmax_files)
+    
+    # Create folder/zip names
+    min_folder <- paste0("prism_tmin_us_25m_", date_nodash)
+    min_zip <- paste0(prism_folder, min_folder, ".zip")
+    max_folder <- paste0("prism_tmax_us_25m_", date_nodash)
+    max_zip <- paste0(prism_folder, max_folder, ".zip")
+
+    # Download min and max temperatures (ºC)
+    req <- request(url_base)
+    
+    req_min <- req %>%
+      req_url_path_append("tmin", date_nodash)
+    invisible(req_perform(req_min, path = min_zip))
+    
+    req_max <- req %>%
+      req_url_path_append("tmax", date_nodash)
+    invisible(req_perform(req_max, path = max_zip))
+    
+    # Unzip folders
+    suppressWarnings(
+      utils::unzip(min_zip, exdir = paste0(prism_folder, min_folder))
+    )
+    suppressWarnings(
+      utils::unzip(max_zip, exdir = paste0(prism_folder, max_folder))
+    )
+    
+    # Remove zips
+    invisible(file.remove(min_zip))
+    invisible(file.remove(max_zip))
+
+    # Read files in as SpatRasters
+    tmin_file <- paste0(prism_folder, min_folder, "/", min_folder, ".tif")
+    tmax_file <- paste0(prism_folder, max_folder, "/", max_folder, ".tif")
     tmin <- terra::rast(tmin_file)
     tmax <- terra::rast(tmax_file)
     
     # Crop temperature rasters to NE
     tmin_roi <- terra::crop(tmin, roi, mask = TRUE)
     tmax_roi <- terra::crop(tmax, roi, mask = TRUE)
-    
+      
     # Convert temperatures to ºF
     tmin_roi <- tmin_roi * 9/5 + 32
     tmax_roi <- tmax_roi * 9/5 + 32
-    
+      
     # Calculate GDDs
     temps_sds <- terra::sds(tmin_roi, tmax_roi)
     gdd <- terra::lapp(temps_sds, function(x, y) {
@@ -193,7 +211,7 @@ if (need_yest_only == FALSE & up_to_date == FALSE) {
         base = 50
       )
     })  
-    
+
     # If Jan 1, then layer is the first in GDDs SpatRaster
     # If not, append layer to GDDs
     if (i == 1) {
@@ -206,28 +224,42 @@ if (need_yest_only == FALSE & up_to_date == FALSE) {
 } else {
   
   if (need_yest_only) {
-
-    # Download min and max temperatures (ºC)
-    tmin_download <- get_prism_dailys(type = "tmin", 
-                                      dates = yesterday,
-                                      keepZip = FALSE)
-    tmax_download <- get_prism_dailys(type = "tmax", 
-                                      dates = yesterday,
-                                      keepZip = FALSE)
     
+    # Date without dashes
+    yest_nodash <- str_remove_all(yesterday, "-")
+    
+    # Create folder/zip names
+    min_folder <- paste0("prism_tmin_us_25m_", yest_nodash)
+    min_zip <- paste0(prism_folder, min_folder, ".zip")
+    max_folder <- paste0("prism_tmax_us_25m_", yest_nodash)
+    max_zip <- paste0(prism_folder, max_folder, ".zip")
+    
+    # Download min and max temperatures (ºC)
+    req <- request(url_base)
+    
+    req_min <- req %>%
+      req_url_path_append("tmin", yest_nodash)
+    invisible(req_perform(req_min, path = min_zip))
+    
+    req_max <- req %>%
+      req_url_path_append("tmax", yest_nodash)
+    invisible(req_perform(req_max, path = max_zip))
+    
+    # Unzip folders
+    suppressWarnings(
+      utils::unzip(min_zip, exdir = paste0(prism_folder, min_folder))
+    )
+    suppressWarnings(
+      utils::unzip(max_zip, exdir = paste0(prism_folder, max_folder))
+    )
+    
+    # Remove zips
+    invisible(file.remove(min_zip))
+    invisible(file.remove(max_zip))
+
     # Read files in as SpatRasters
-    date_nodash <- str_remove_all(yesterday, "-")
-    tfolders <- list.files(path = prism_folder, pattern = date_nodash, include.dirs = TRUE)
-    tmin_folder <- str_subset(tfolders, pattern = "tmin")
-    tmin_files <- list.files(path = paste0(prism_folder, "/", tmin_folder), full.names = TRUE)
-    tmin_file <- tibble(tmin_files) %>%
-      filter(str_sub(tmin_files, -7) == "bil.bil") %>%
-      pull(tmin_files)
-    tmax_folder <- str_subset(tfolders, pattern = "tmax")
-    tmax_files <- list.files(path = paste0(prism_folder, "/", tmax_folder), full.names = TRUE)
-    tmax_file <- tibble(tmax_files) %>%
-      filter(str_sub(tmax_files, -7) == "bil.bil") %>%
-      pull(tmax_files)
+    tmin_file <- paste0(prism_folder, min_folder, "/", min_folder, ".tif")
+    tmax_file <- paste0(prism_folder, max_folder, "/", max_folder, ".tif")
     tmin <- terra::rast(tmin_file)
     tmax <- terra::rast(tmax_file)
     
