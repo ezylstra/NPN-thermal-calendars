@@ -152,7 +152,7 @@ if (GDDs_exists) {
   if (up_to_date == FALSE) {
     # Identify which dates are missing
     gdd_layers <- str_remove(names(GDDs), "d") 
-    missing <- setdiff(dates, as.Date(gdd_layers))
+    missing <- setdiff(as.character(dates), gdd_layers)
   }
 }
 
