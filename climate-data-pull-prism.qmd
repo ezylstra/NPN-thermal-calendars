@@ -127,44 +127,55 @@ calc_gdd_be <- function(tmin = NULL, tmax = NULL, base = 32) {
 # Get yesterday's date
 yesterday <- Sys.Date() - 1
 
+# Get yesterday's year
+yesterday_yr <- year(yesterday)
+
 # Sequence of current-year dates through yesterday
-dates <- seq.Date(as.Date(paste0(year(yesterday), "-01-01")), yesterday, by = 1)
+dates <- seq.Date(as.Date(paste0(yesterday_yr, "-01-01")), yesterday, by = 1)
 
 # If pin doesn't exist or if it exists but is missing layers, download 
-# all data for this year through yesterday. If all layers, including yesterday,
-# are in there, do nothing. Otherwise, download data from yesterday and append.
+# data for all missing dates. If script is running nightly, then will just
+# need to download yesterday's data. 
 
-GDDs_exists <- pin_exists(board, "ezylstra/GDDs-prism")
-need_yest_only <- FALSE
+GDDs_exists <- pin_exists(board, paste0("ezylstra/GDDs-", yesterday_yr, "-prism"))
 up_to_date <- FALSE
+missing <- dates
 
 if (GDDs_exists) {
-  GDDs <- pin_read(board = board, "ezylstra/GDDs-prism")
+  GDDs <- pin_read(board = board, paste0("ezylstra/GDDs-", yesterday_yr, "-prism"))
   GDDs <- terra::unwrap(GDDs)
   last_date <- str_remove(last(names(GDDs)), "d") %>%
     str_replace_all(pattern = "\\.", replacement = "-") %>%
     as.Date()
   up_to_date <- ifelse(nlyr(GDDs) == length(dates) & last_date == yesterday, TRUE, FALSE)
-  need_yest_only <- ifelse(nlyr(GDDs) == length(dates) - 1 & last_date == yesterday - 1, 
-                           TRUE, FALSE)
+
+  if (up_to_date == FALSE) {
+    # Identify which dates are missing
+    gdd_layers <- str_remove(names(GDDs), "d") 
+    missing <- setdiff(dates, as.Date(gdd_layers))
+  }
 }
 
-if (need_yest_only == FALSE & up_to_date == FALSE) {
+if (up_to_date == TRUE) {
   
-  # Loop through all dates
-  for (i in 1:length(dates)) {
+  stop("GDDs have already been calculated through yesterday")
+
+} else {
+  
+  # Loop through missing dates
+  for (i in 1:length(missing)) {
+  
+    message(paste0("Calculating GDD for ", missing[i]))
     
-    # message(paste0("Calculating GDD for ", dates[i]))
-  
     # Date without dashes
-    date_nodash <- str_remove_all(dates[i], "-")
+    date_nodash <- str_remove_all(missing[i], "-")
     
     # Create folder/zip names
     min_folder <- paste0("prism_tmin_us_25m_", date_nodash)
     min_zip <- paste0(prism_folder, min_folder, ".zip")
     max_folder <- paste0("prism_tmax_us_25m_", date_nodash)
     max_zip <- paste0(prism_folder, max_folder, ".zip")
-
+    
     # Download min and max temperatures (ºC)
     req <- request(url_base)
     
@@ -187,7 +198,7 @@ if (need_yest_only == FALSE & up_to_date == FALSE) {
     # Remove zips
     invisible(file.remove(min_zip))
     invisible(file.remove(max_zip))
-
+    
     # Read files in as SpatRasters
     tmin_file <- paste0(prism_folder, min_folder, "/", min_folder, ".tif")
     tmax_file <- paste0(prism_folder, max_folder, "/", max_folder, ".tif")
@@ -197,11 +208,11 @@ if (need_yest_only == FALSE & up_to_date == FALSE) {
     # Crop temperature rasters to NE
     tmin_roi <- terra::crop(tmin, roi, mask = TRUE)
     tmax_roi <- terra::crop(tmax, roi, mask = TRUE)
-      
+    
     # Convert temperatures to ºF
     tmin_roi <- tmin_roi * 9/5 + 32
     tmax_roi <- tmax_roi * 9/5 + 32
-      
+    
     # Calculate GDDs
     temps_sds <- terra::sds(tmin_roi, tmax_roi)
     gdd <- terra::lapp(temps_sds, function(x, y) {
@@ -211,82 +222,22 @@ if (need_yest_only == FALSE & up_to_date == FALSE) {
         base = 50
       )
     })  
-
-    # If Jan 1, then layer is the first in GDDs SpatRaster
-    # If not, append layer to GDDs
-    if (i == 1) {
+    
+    # Name layer
+    names(gdd) <- paste0("d", missing[i])
+    
+    # If there are no GDD layers already, create GDDs. Otherwise append.
+    if (!exists("GDDs")) {
       GDDs <- gdd
     } else {
       GDDs <- c(GDDs, gdd)
     }
-  } # dates
-
-} else {
-  
-  if (need_yest_only) {
-    
-    # Date without dashes
-    yest_nodash <- str_remove_all(yesterday, "-")
-    
-    # Create folder/zip names
-    min_folder <- paste0("prism_tmin_us_25m_", yest_nodash)
-    min_zip <- paste0(prism_folder, min_folder, ".zip")
-    max_folder <- paste0("prism_tmax_us_25m_", yest_nodash)
-    max_zip <- paste0(prism_folder, max_folder, ".zip")
-    
-    # Download min and max temperatures (ºC)
-    req <- request(url_base)
-    
-    req_min <- req %>%
-      req_url_path_append("tmin", yest_nodash)
-    invisible(req_perform(req_min, path = min_zip))
-    
-    req_max <- req %>%
-      req_url_path_append("tmax", yest_nodash)
-    invisible(req_perform(req_max, path = max_zip))
-    
-    # Unzip folders
-    suppressWarnings(
-      utils::unzip(min_zip, exdir = paste0(prism_folder, min_folder))
-    )
-    suppressWarnings(
-      utils::unzip(max_zip, exdir = paste0(prism_folder, max_folder))
-    )
-    
-    # Remove zips
-    invisible(file.remove(min_zip))
-    invisible(file.remove(max_zip))
-
-    # Read files in as SpatRasters
-    tmin_file <- paste0(prism_folder, min_folder, "/", min_folder, ".tif")
-    tmax_file <- paste0(prism_folder, max_folder, "/", max_folder, ".tif")
-    tmin <- terra::rast(tmin_file)
-    tmax <- terra::rast(tmax_file)
-    
-    # Crop temperature rasters to NE
-    tmin_roi <- terra::crop(tmin, roi, mask = TRUE)
-    tmax_roi <- terra::crop(tmax, roi, mask = TRUE)
-      
-    # Convert temperatures to ºF
-    tmin_roi <- tmin_roi * 9/5 + 32
-    tmax_roi <- tmax_roi * 9/5 + 32
-      
-    # Calculate GDDs
-    temps_sds <- terra::sds(tmin_roi, tmax_roi)
-    gdd <- terra::lapp(temps_sds, function(x, y) {
-      calc_gdd_be(
-        tmin = x,
-        tmax = y,
-        base = 50
-      )
-    })  
-  
-    # Append yesterday's data to GDDs
-    GDDs <- c(GDDs, gdd)
   }
 }
 
-names(GDDs) <- paste0("d", dates)
+# Sort layers (just in case)
+sorted_names <- sort(names(GDDs))
+GDDs <- GDDs[[sorted_names]]
 ```
 
 ```{r  agdd-thresholds}
@@ -337,21 +288,21 @@ threshold_doys <- terra::wrap(threshold_doys)
 pin_write(board = board,
           x = threshold_doys,
           type = "qs",
-          name = "ezylstra/current-doys-prism")
+          name = paste0("ezylstra/current-doys-", yesterday_yr, "-prism"))
 
 # Pin new anomaly rasters
 anomalies <- terra::wrap(anomalies)
 pin_write(board = board,
           x = anomalies,
           type = "qs",
-          name = "ezylstra/anomalies-prism")
+          name = paste0("ezylstra/anomalies-", yesterday_yr, "-prism"))
 
 # Pin new GDD rasters
 GDDs <- terra::wrap(GDDs)
 pin_write(board = board,
           x = GDDs,
           type = "qs",
-          name = "ezylstra/GDDs-prism")
+          name = paste0("ezylstra/GDDs-", yesterday_yr, "-prism"))
 
 # Delete temporary folder
 unlink(prism_folder, recursive = TRUE)
