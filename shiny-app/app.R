@@ -2,7 +2,7 @@
 # DOY & SD)
 
 # ER Zylstra
-# 5 May 2025
+# 19 June 2025
 
 library(dplyr)
 library(lubridate)
@@ -27,15 +27,19 @@ board <- board_connect(
   key = Sys.getenv("CONNECT_API_KEY")
 )
 
+# Get year (for yesterday - last date we have data for)
+yesterday <- Sys.Date() - 1
+yesterday_yr <- year(yesterday)
+
 # Load current-year rasters
-doys <- pin_read(board, "ezylstra/current-doys-prism")
+doys <- pin_read(board, paste0("ezylstra/current-doys-", yesterday_yr, "-prism"))
 doys <- terra::unwrap(doys)
 # Convert to RasterBrick
 doys <- raster::brick(doys)
 names(doys) <- stringr::str_replace_all(names(doys), "X", "t")
 
 # Load anomaly rasters
-anoms <- pin_read(board, "ezylstra/anomalies-prism")
+anoms <- pin_read(board, paste0("ezylstra/anomalies-", yesterday_yr, "-prism"))
 anoms <- terra::unwrap(anoms)
 # Convert to RasterBrick
 anoms <- raster::brick(anoms)
