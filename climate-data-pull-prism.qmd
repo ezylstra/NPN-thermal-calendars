@@ -82,25 +82,23 @@ roi <- terra::project(roi, "epsg:4269")
 #' @param tmax Numeric vector; max daily temp in ºF.
 #' @param base Base temp in ºF.
 calc_gdd_be <- function(tmin = NULL, tmax = NULL, base = 32) {
-  # withr::local_options(list(warn = 2)) # Turn warnings into errors in the scope of this function
+  withr::local_options(list(warn = 2)) # Turn warnings into errors in the scope of this function
   .mapply(function(tmin, tmax) { # For each day...
     # NAs beget NAs
     if (is.na(tmin) | is.na(tmax)) {
       return(NA)
     }
+    
     # Check that tmax >= tmin
-    # If tmin is just slightly greater than tmax, print warning but don't stop execution
-    if (tmin - tmax > 0.5) {
+    if (tmin > tmax) {
       stop("tmin > tmax!")
     } 
-    if (tmin - tmax <= 0.5 & tmin - tmax > 0) {
-      warning("tmin - tmax between 0 and 0.5 for one or more cells")
-      tmin <- tmax
-    }
+
     # Step 2
     if (tmax < base) {
       return(0)
     }
+    
     # Step 3
     tmean <- (tmin + tmax) / 2
     
