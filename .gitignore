@@ -10,3 +10,6 @@ rasters-sds/*
 !rasters-sds/.gitkeep
 rasters-counts/*
 !rasters-counts/.gitkeep
+rasters-archive/*
+!rasters-archive/.gitkeep
+
