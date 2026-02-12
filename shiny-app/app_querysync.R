@@ -46,8 +46,8 @@ names(anoms) <- stringr::str_replace_all(names(anoms), "X", "t")
 threshold_list <- seq(50, 2500, by = 50)
 
 # Load file with pest-specific thresholds
-pests <- read.csv("pest-thresholds-subset.csv")
-pests_empty <- data.frame(spp = "", event = "", type = "", threshold = NA)
+pests <- read.csv("pest-thresholds-2spp.csv")
+pests_empty <- data.frame(spp = "", event = "", threshold = NA)
 pests <- rbind(pests_empty, pests) %>%
   mutate(layer = paste0("t", threshold))
 
@@ -144,7 +144,7 @@ ui <- page_sidebar(
                                 label = "Opacity:",
                                 min = 0,
                                 max = 1, 
-                                value = 0.7)
+                                value = 0.8)
           ),
           nav_panel("Background",
                     br(),
@@ -286,16 +286,15 @@ server <- function(input, output, session) {
                                choices = unique(pests$spp),
                                selected = "")
     output[[2]] <- selectInput("event", "Biological event", choices = NULL)
-    output[[3]] <- selectInput("type", "Threshold type", choices = NULL)
-    output[[4]] <- actionButton(inputId = "show_threshold",
+    output[[3]] <- actionButton(inputId = "show_threshold",
                                 label = "Update threshold",
                                 class = "btn btn-primary btn-sm")
-    output[[5]] <- p("")
-    output[[6]] <- value_box(title = "Selected threshold",
+    output[[4]] <- p("")
+    output[[5]] <- value_box(title = "Selected threshold",
                              value = uiOutput("selected"),
                              theme = "text-blue",
                              max_height = "100px")
-    output[[7]] <- actionButton(inputId = "plot",
+    output[[6]] <- actionButton(inputId = "plot",
                                 label = "Plot", 
                                 class = "btn btn-primary",
                                 disabled = TRUE)
@@ -321,29 +320,18 @@ server <- function(input, output, session) {
     updateSelectInput(inputId = "type", choices = "")
     updateActionButton(input = "plot", disabled = TRUE)
   })
-  
-  # Create choices for Type input
-  observeEvent(input$event, {
-    type_choices <- pests %>% 
-      filter(spp %in% c(input$pest, ""), 
-             event %in% c(input$event, "")) %>%
-      pull(type)
-    updateSelectInput(inputId = "type", choices = type_choices, selected = "")
-    output$selected <- renderText({""})
-    updateActionButton(input = "plot", disabled = TRUE)
-  })
-  
+
   # Clear selected threshold if changed threshold type 
-  observeEvent(input$type, {
+  observeEvent(input$event, {
     output$selected <- renderText({""})
     updateActionButton(input = "plot", disabled = TRUE)
   })
   
   # Identify selected threshold if going with pest options
   observeEvent(input$show_threshold, {
-    req(input$pest, input$event, input$type)
+    req(input$pest, input$event)
     selected <- pests %>% 
-      filter(spp == input$pest, event == input$event, type == input$type) %>%
+      filter(spp == input$pest, event == input$event) %>%
       pull(threshold)
     output$selected <- renderText({selected})
     updateActionButton(inputId = "plot", disabled = FALSE)
