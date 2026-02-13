@@ -106,7 +106,7 @@ ui <- page_sidebar(
          color: white;
       }
   "),
-  
+
   tags$head(
     tags$style(
       ".leaflet .legend {
@@ -115,24 +115,51 @@ ui <- page_sidebar(
                  }",
       ".bslib-card .card-header {
                     line-height: 0.7rem;
+                    }",
+      ".sidebar-content {
+                    font-size: 90%;
+                    margin: 0 !important;
+                    padding-top: 5px !important;
+                    }",
+      ".bslib-sidebar-layout .sidebar {
+                    padding-top: 0 !important;
+                    }",
+      ".nav-tabs {
+                    margin: 0 !important;
+                    padding: 0 !important;
                     }"
     )
   ),
-
+  
   title = h4("What day of the year do locations in the northeastern U.S. reach
              accumulated growing degree day thresholds?"),
   
   sidebar = sidebar(
-    div(style = "font-size:90%",
+    padding = list(0, "1rem", "1rem", "1rem"),  # top, right, bottom, left
+    div(class = "sidebar-content",
         navset_tab(
           nav_panel("Settings",
                     br(),
-                    p("Begin by selecting whether to choose an AGDD threshold 
-                  directly or indirectly by identifying a pest species. After 
-                  selecting the options of interest (and clicking “Update 
-                  threshold” if selecting a pest species), click the Plot button 
-                  to view maps. Clicking on a map will provide the value at that 
-                  location in the lower left corner of the map."),
+                    p("Begin by selecting an accumulated growing degree day
+                      (AGDD) threshold of interest from the dropdown menu and 
+                      clicking the ", strong("Plot"), " button to view maps.
+                      Clicking on one of the maps will provide the values at 
+                      that location in the the lower left corner of each map.",
+                      br(),
+                      br(),
+                      "Pest examples: Two common pests in this region are 
+                      provided to illustrate how this tool may be used when AGDD 
+                      thresholds for a species are known. After selecting the ", 
+                      strong("Pest"),
+                      "radio button and the subsequent options of interest, 
+                      click ", strong("Update threshold"), " and then the ",
+                      strong("Plot"), " button to view maps. A list of known 
+                      AGDD thresholds for other pests maybe found on the ",
+                      tags$a(
+                        href = "https://www.usanpn.org/data/maps/forecasts",
+                        "USA-NPN website."
+                      )
+                    ),
                     radioButtons("method", "Selection method",
                                  choices = c("Threshold" = "Threshold", 
                                              "Pest" = "Pest"),
@@ -148,77 +175,92 @@ ui <- page_sidebar(
           ),
           nav_panel("Background",
                     br(),
-                    p("This website displays maps indicating when locations in the 
-                  Northeastern U.S. reach accumulated growing degree day (AGDD) 
-                  thresholds, both in the current calendar year and averaged over 
-                  a recent 30-year period (1991-2020). Maps are provided for 50 
-                  thresholds in 50 degree-day increments, from 50 AGDD to 2500 
-                  AGDD. Thresholds can be selected in the Settings tab by 
-                  selecting a AGDD threshold directly or by selecting a pest 
-                  species, biological event, and threshold type.",
+                    p("This website displays maps indicating when locations in 
+                      the northeastern U.S. reach accumulated growing degree day 
+                      (AGDD) thresholds, both in the current calendar year and 
+                      averaged over a recent 30-year period (1991-2020). Maps 
+                      are provided for 50 thresholds in 50 degree-day 
+                      increments, from 50 AGDD to 2500 AGDD. Thresholds can be 
+                      selected in the Settings tab by selecting an AGDD 
+                      threshold directly or by selecting a pest species and 
+                      biological event.",
                       br(),
                       br(),
                       "For each threshold, four maps are displayed:"),
-                    tags$ul(
-                      tags$li(strong("Anomaly: "), 
-                              "Number of days earlier or later the threshold has
-                          been reached this year compared to the average day
-                          the threshold was reached in 1991-2020"),
-                      tags$li(strong("Current day of year: "), 
-                              "The day of year the threshold was reached this 
-                          calendar year"),
-                      tags$li(strong("Mean day of year: "),
-                              "The average day of year the threshold was reached 
-                          between 1991 and 2020."),
-                      tags$li(strong("Standard deviation: "),
-                              "The standard deviation associated with the average 
-                          day of year the threshold was reached between 1991 and 
-                          2020.")
-                    ),
-                    br(),
-                    p("This project was supported by the Northeast Climate Adapation
-                  Science Center, the USA National Phenology Network, the
-                  University of Arizona, and the U.S. Forest Service."),
+                      tags$ul(
+                        tags$li(strong("Current day of year: "), 
+                                "The day of year the threshold was reached this 
+                                calendar year."),
+                        tags$li(strong("Deviation from average: "), 
+                                "The number of days earlier or later the
+                                threshold has been reached this year compared to
+                                the average day the threshold was reached in 
+                                1991-2020."),
+                        tags$li(strong("Average day of year: "),
+                                "The average day of year the threshold was 
+                                reached between 1991 and 2020."),
+                        tags$li(strong("Variability associated with average conditions: "),
+                                "The variability (standard deviation) associated 
+                                with the average day of year the threshold was 
+                                reached between 1991 and 2020.")
+                      ),
+                    p("This project was supported by the Northeast Climate 
+                      Adapation Science Center, the USA National Phenology 
+                      Network, the University of Arizona, and the U.S. Forest 
+                      Service."),
                     div(
-                      style = "text-align: center;",
-                      img(src = "NECASClogo.png", height = "75%", width = "75%")
+                      # style = "text-align: center;",
+                      style = "display: inline-flex; justify-content: space-evenly; align-items: center;",
+                      img(src = "NECASClogo.png", height = "70%", width = "70%"),
+                      img(src = "USFSlogo.png", height = "20%", width = "20%")
                     ),
                     div(
                       style = "display: inline-flex; justify-content: space-evenly; align-items: center;",
                       img(src = "NPNlogo.png", height = "50%", width = "50%"),
                       img(src = "UAlogo.png", height = "25%", width = "25%")
-                    ),
-                    br(),
-                    br(),
-                    p("The code to run this website is available at ... For more 
-                  information contact...")
+                    )
           ),
           nav_panel("Methods",
                     br(),
-                    p(strong("Mean day of year and standard deviation (SD) maps: "),
-                      "For each year from 1991-2020, we obtained daily minimum and 
-                  maximum temperatures for the Northeastern U.S. at 4-km resolution 
-                  from the PRISM Climate Group (Oregon State University, ",
-                      a(href = "https://prism.oregonstate.edu", 
-                        "https://prism.oregonstate.edu", .noWS = "after"),
-                      "). We used these data to calculate AGDD using the 
-                  Baskerville-Emin method with a base temperature of 50 deg F, 
-                  and identified the day of the year that each threshold was 
-                  reached. The maps display the mean day of the year each 
-                  threshold was reached (or the standard deviation, SD) over the 
-                  30-year period. We excluded any locations where the threshold 
-                  was reached in only of the 30 years."),
-                    p(strong("Current day of year and anomaly maps: "),
-                      "We obtained daily minimum and maximum temperatures for the 
-                  Northeastern U.S. for the current calendar year through 
-                  yesterday from PRISM. We used the same methods described above 
-                  to calculate daily AGDD values and identify the day of the year 
-                  that each threshold was reached. To calculate anomalies, we 
-                  subtracted the current day of year a threshold was reached 
-                  from the long-term average; negative values indicate a threshold 
-                  was reached earlier than normal and positive values indicate a 
-                  threshold was reached later than normal.")
-          ),
+                    p(strong("Current day of year"), " and ",
+                      strong("Deviation from average"), " maps: ",
+                      br(),
+                      "We obtained daily minimum and maximum temperatures 
+                      for the northeastern U.S. at 4-km resolution for the 
+                      current calendar year through yesterday from the PRISM 
+                      Climate Group (Oregon State University, ",
+                      tags$a(href = "https://prism.oregonstate.edu", 
+                             "https://prism.oregonstate.edu", 
+                             .noWS = "after"),
+                      "). We used these data to calculate accumulated growing 
+                      degree days (AGDD) using the Baskerville-Emin method with 
+                      a base temperature of 50 deg F and a start date of 
+                      January 1, and identified the day of the year that each of
+                      50 thresholds was reached. To calculate deviations from
+                      average conditions, we subtracted the current day of the 
+                      year a threshold was reached from the long-term average; 
+                      negative values indicate a threshold was reached earlier 
+                      than normal and positive values indicate a threshold was 
+                      reached later than normal."
+                    ), 
+                    p(strong("Average day of year"), " and ",
+                      strong("Variability associated with average conditions"),
+                      "maps:",
+                      br(),
+                      "We used the same methods described above to
+                      calculate daily AGDD values for each year from 1991 to 
+                      2020. The maps display the average day of the year each 
+                      threshold was reached (or its variability) over the 
+                      30-year period. We excluded any locations where the 
+                      threshold was reached in only one of the 30 years."
+                    ),
+                    br(),
+                    p(strong("Disclaimer:"),
+                      "Actual AGDD values and threshold dates may differ from 
+                      those presented here due to local environmental 
+                      conditions. Activities or decisions based on these data 
+                      should be buffered accordingly.")
+          )
         )
     ),
     width = "25%"
@@ -232,7 +274,6 @@ ui <- page_sidebar(
     plot_card("Variability associated with average conditions", leafletOutput("sd")),
     gap = 0
   )
-  
 )
 
 # server ----------------------------------------------------------------------#
@@ -286,15 +327,23 @@ server <- function(input, output, session) {
                                choices = unique(pests$spp),
                                selected = "")
     output[[2]] <- selectInput("event", "Biological event", choices = NULL)
-    output[[3]] <- actionButton(inputId = "show_threshold",
-                                label = "Update threshold",
-                                class = "btn btn-primary btn-sm")
-    output[[4]] <- p("")
-    output[[5]] <- value_box(title = "Selected threshold",
-                             value = uiOutput("selected"),
-                             theme = "text-blue",
-                             max_height = "100px")
-    output[[6]] <- actionButton(inputId = "plot",
+    output[[3]] <- layout_columns(
+      col_widths = c(5, 7),
+      actionButton(inputId = "show_threshold",
+                   label = "Update threshold",
+                   class = "btn btn-primary btn-sm",
+                   style = "margin-top: 5px;"),
+      div(class = "custom-threshold-box",
+          style = "display: flex; align-items: center; justify-content: space-between; 
+                   border: 1px solid #dee2e6; border-radius: 0.25rem; padding: 0.5rem 1rem;
+                   background-color: #f8f9fa; min-height: 60px;",
+          div(style = "font-size: 0.90rem; color: #6c757d; font-weight: 500;", 
+              "Selected threshold"),
+          div(style = "font-size: 1.25rem; font-weight: 500;",
+              uiOutput("selected"))
+      )
+    )
+    output[[4]] <- actionButton(inputId = "plot",
                                 label = "Plot", 
                                 class = "btn btn-primary",
                                 disabled = TRUE)
