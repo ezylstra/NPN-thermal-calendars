@@ -8,6 +8,7 @@ library(dplyr)
 library(lubridate)
 library(stringr)
 library(raster)
+library(sf)
 library(shiny)
 library(leaflet)
 library(leaflet.extras2)
@@ -116,7 +117,7 @@ ui <- page_sidebar(
                     line-height: 0.7rem;
                     }",
       ".sidebar-content {
-                    font-size: 90%;
+                    font-size: 95%;
                     margin: 0 !important;
                     padding-top: 5px !important;
                     }",
@@ -327,20 +328,23 @@ server <- function(input, output, session) {
                                selected = "")
     output[[2]] <- selectInput("event", "Biological event", choices = NULL)
     output[[3]] <- layout_columns(
-      col_widths = c(5, 7),
-      actionButton(inputId = "show_threshold",
-                   label = "Update threshold",
-                   class = "btn btn-primary btn-sm",
-                   style = "margin-top: 5px;"),
-      div(class = "custom-threshold-box",
-          style = "display: flex; align-items: center; justify-content: space-between; 
+        col_widths = c(5, 7),
+        gap = "10px",
+        row_heights = "auto",
+        div(style = "display: flex; align-items: center; height: 100%;",
+            actionButton(inputId = "show_threshold",
+                         label = "Update threshold",
+                         class = "btn btn-primary btn-sm")
+        ),
+        div(class = "custom-threshold-box",
+            style = "display: flex; align-items: center; justify-content: space-between; 
                    border: 1px solid #dee2e6; border-radius: 0.25rem; padding: 0.5rem 1rem;
                    background-color: #f8f9fa; min-height: 60px;",
-          div(style = "font-size: 0.90rem; color: #6c757d; font-weight: 500;", 
-              "Selected threshold"),
-          div(style = "font-size: 1.25rem; font-weight: 500;",
-              uiOutput("selected"))
-      )
+            div(style = "font-size: 0.90rem; color: #6c757d; font-weight: 500;", 
+                "Selected threshold"),
+            div(style = "font-size: 1.25rem; font-weight: 500;",
+                uiOutput("selected"))
+        )
     )
     output[[4]] <- actionButton(inputId = "plot",
                                 label = "Plot", 
@@ -557,7 +561,7 @@ server <- function(input, output, session) {
       }
     }, error = function(e) NULL)
   }
-  
+
   # Create reactive values to store click coordinates
   clickCoords <- reactiveVal(NULL)
   
@@ -582,13 +586,13 @@ server <- function(input, output, session) {
   observeEvent(clickCoords(), {
     req(clickCoords())
     coords <- clickCoords()
-    
+
     # Get values from all rasters
     anom_val <- getRasterValue(currentRasters$anom, coords$lat, coords$lng)
     doy_val <- getRasterValue(currentRasters$doy, coords$lat, coords$lng)
     mean_val <- getRasterValue(currentRasters$mean, coords$lat, coords$lng)
     sd_val <- getRasterValue(currentRasters$sd, coords$lat, coords$lng)
-    
+
     # Update each map with custom HTML control showing the value
     # Use removeControl with layerId instead of clearControls to preserve legends
     # If value is NULL, remove the control entirely
@@ -691,7 +695,7 @@ server <- function(input, output, session) {
     # Add rasters to each base map
     leafletProxy("mean") %>%
       clearImages() %>%
-      clearControls() %>%
+      removeControl(layerId = "legend") %>%
       fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
       addRasterImage(reacMean,
                      colors = pal_mean,
@@ -704,12 +708,13 @@ server <- function(input, output, session) {
                 values = values(reacMean),
                 labFormat = myLabelFormat(dates = TRUE),
                 title = NULL,
+                layerId = "legend",
                 opacity = 0.8) %>%
       addLeafletsync(c("anom", "doy", "mean", "sd"))
     
     leafletProxy("sd") %>%
       clearImages() %>%
-      clearControls() %>%
+      removeControl(layerId = "legend") %>%
       fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
       addRasterImage(reacSD, 
                      colors = pal_sd,
@@ -722,13 +727,14 @@ server <- function(input, output, session) {
                 values = values(reacSD),
                 labFormat = myLabelFormat(dates = FALSE),
                 title = "Standard deviation<br>(days)", 
+                layerId = "legend",
                 opacity = 0.8) %>%
       addLeafletsync(c("anom", "doy", "mean", "sd"))
 
     if (!reacDOY_NA) {
       leafletProxy("doy") %>%
         clearImages() %>%
-        clearControls() %>%
+        removeControl(layerId = "legend") %>%
         fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
         addRasterImage(reacDOY, 
                        colors = pal_mean, 
@@ -741,12 +747,13 @@ server <- function(input, output, session) {
                   values = c(values(reacMean), values(reacDOY)),
                   labFormat = myLabelFormat(dates = TRUE),
                   title = NULL, 
+                  layerId = "legend",
                   opacity = 0.8) %>%
         addLeafletsync(c("anom", "doy", "mean", "sd"))
     } else {
       leafletProxy("doy") %>%
         clearImages() %>%
-        clearControls() %>%
+        removeControl(layerId = "legend") %>%
         fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
         addLeafletsync(c("anom", "doy", "mean", "sd"))
     }
@@ -758,7 +765,7 @@ server <- function(input, output, session) {
                                na.color = "transparent")
       leafletProxy("anom") %>%
         clearImages() %>%
-        clearControls() %>%
+        removeControl(layerId = "legend") %>%
         fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
         addRasterImage(reacAnom, 
                        colors = pal_anom, 
@@ -771,12 +778,13 @@ server <- function(input, output, session) {
                   values = values(reacAnom),
                   labFormat = myLabelFormat(anomalies = TRUE),
                   title = NULL, 
+                  layerId = "legend",
                   opacity = 0.8) %>%
         addLeafletsync(c("anom", "doy", "mean", "sd"))
     } else {
       leafletProxy("anom") %>%
         clearImages() %>%
-        clearControls() %>%
+        removeControl(layerId = "legend") %>%
         fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
         addLeafletsync(c("anom", "doy", "mean", "sd"))
     }
