@@ -2,7 +2,7 @@
 # DOY & SD)
 
 # ER Zylstra
-# 19 June 2025
+# 13 Feb 2026
 
 library(dplyr)
 library(lubridate)
@@ -11,15 +11,11 @@ library(raster)
 library(shiny)
 library(leaflet)
 library(leaflet.extras2)
-library(leafem)
 library(htmlwidgets)
 library(bslib)
 library(shinyjs)
 library(pins)
 library(qs)
-
-# Note: using raster instead of terra since terra doesn't seem to play nice with 
-# leafem::addImageQuery()
 
 board <- board_connect(
   auth = "manual",
@@ -49,8 +45,8 @@ names(anoms) <- stringr::str_replace_all(names(anoms), "X", "t")
 threshold_list <- seq(50, 2500, by = 50)
 
 # Load file with pest-specific thresholds
-pests <- read.csv("pest-thresholds-subset.csv")
-pests_empty <- data.frame(spp = "", event = "", type = "", threshold = NA)
+pests <- read.csv("pest-thresholds-2spp.csv")
+pests_empty <- data.frame(spp = "", event = "", threshold = NA)
 pests <- rbind(pests_empty, pests) %>%
   mutate(layer = paste0("t", threshold))
 
@@ -109,7 +105,7 @@ ui <- page_sidebar(
          color: white;
       }
   "),
-  
+
   tags$head(
     tags$style(
       ".leaflet .legend {
@@ -118,128 +114,170 @@ ui <- page_sidebar(
                  }",
       ".bslib-card .card-header {
                     line-height: 0.7rem;
+                    }",
+      ".sidebar-content {
+                    font-size: 90%;
+                    margin: 0 !important;
+                    padding-top: 5px !important;
+                    }",
+      ".bslib-sidebar-layout .sidebar {
+                    padding-top: 0 !important;
+                    }",
+      ".nav-tabs {
+                    margin: 0 !important;
+                    padding: 0 !important;
                     }"
     )
   ),
-
+  
   title = h4("What day of the year do locations in the northeastern U.S. reach
-             accumulated heat thresholds?"),
+             accumulated growing degree day thresholds?"),
   
   sidebar = sidebar(
-    div(style = "font-size:90%",
-    navset_tab(
-      nav_panel("Settings",
-                br(),
-                p("Begin by selecting whether to choose an AGDD threshold 
-                  directly or indirectly by identifying a pest species. After 
-                  selecting the options of interest (and clicking “Update 
-                  threshold” if selecting a pest species), click the Plot button 
-                  to view maps. Clicking on a map will provide the value at that 
-                  location in the lower left corner of the map."),
-                radioButtons("method", "Selection method",
-                             choices = c("Threshold" = "Threshold", 
-                                         "Pest" = "Pest"),
-                             inline = TRUE),
-                uiOutput("selections"),
-                br(),
-                br(),
-                sliderInput(inputId = "opacity",
-                            label = "Opacity:",
-                            min = 0,
-                            max = 1, 
-                            value = 0.8)
-      ),
-      nav_panel("Background",
-                br(),
-                p("This website displays maps indicating when locations in the 
-                  Northeastern U.S. reach accumulated growing degree day (AGDD) 
-                  thresholds, both in the current calendar year and averaged over 
-                  a recent 30-year period (1991-2020). Maps are provided for 50 
-                  thresholds in 50 degree-day increments, from 50 AGDD to 2500 
-                  AGDD. Thresholds can be selected in the Settings tab by 
-                  selecting a AGDD threshold directly or by selecting a pest 
-                  species, biological event, and threshold type.",
-                  br(),
-                  br(),
-                  "For each threshold, four maps are displayed:"),
-                tags$ul(
-                  tags$li(strong("Anomaly: "), 
-                          "Number of days earlier or later the threshold has
-                          been reached this year compared to the average day
-                          the threshold was reached in 1991-2020"),
-                  tags$li(strong("Current day of year: "), 
-                          "The day of year the threshold was reached this 
-                          calendar year"),
-                  tags$li(strong("Mean day of year: "),
-                          "The average day of year the threshold was reached 
-                          between 1991 and 2020."),
-                  tags$li(strong("Standard deviation: "),
-                          "The standard deviation associated with the average 
-                          day of year the threshold was reached between 1991 and 
-                          2020.")
-                ),
-                br(),
-                p("This project was supported by the Northeast Climate Adapation
-                  Science Center, the USA National Phenology Network, the
-                  University of Arizona, and the U.S. Forest Service."),
-                div(
-                  style = "text-align: center;",
-                  img(src = "NECASClogo.png", height = "75%", width = "75%")
-                ),
-                div(
-                  style = "display: inline-flex; justify-content: space-evenly; align-items: center;",
-                  img(src = "NPNlogo.png", height = "50%", width = "50%"),
-                  img(src = "UAlogo.png", height = "25%", width = "25%")
-                ),
-                br(),
-                br(),
-                p("The code to run this website is available at ... For more 
-                  information contact...")
-      ),
-      nav_panel("Methods",
-                br(),
-                p(strong("Mean day of year and standard deviation (SD) maps: "),
-                  "For each year from 1991-2020, we obtained daily minimum and 
-                  maximum temperatures for the Northeastern U.S. at 4-km resolution 
-                  from the PRISM Climate Group (Oregon State University, ",
-                  a(href = "https://prism.oregonstate.edu", 
-                    "https://prism.oregonstate.edu", .noWS = "after"),
-                  "). We used these data to calculate AGDD using the 
-                  Baskerville-Emin method with a base temperature of 50 deg F, 
-                  and identified the day of the year that each threshold was 
-                  reached. The maps display the mean day of the year each 
-                  threshold was reached (or the standard deviation, SD) over the 
-                  30-year period. We excluded any locations where the threshold 
-                  was reached in only of the 30 years."),
-                p(strong("Current day of year and anomaly maps: "),
-                  "We obtained daily minimum and maximum temperatures for the 
-                  Northeastern U.S. for the current calendar year through 
-                  yesterday from PRISM. We used the same methods described above 
-                  to calculate daily AGDD values and identify the day of the year 
-                  that each threshold was reached. To calculate anomalies, we 
-                  subtracted the current day of year a threshold was reached 
-                  from the long-term average; negative values indicate a threshold 
-                  was reached earlier than normal and positive values indicate a 
-                  threshold was reached later than normal.")
-      ),
-    )
+    padding = list(0, "1rem", "1rem", "1rem"),  # top, right, bottom, left
+    div(class = "sidebar-content",
+        navset_tab(
+          nav_panel("Settings",
+                    br(),
+                    p("Begin by selecting an accumulated growing degree day
+                      (AGDD) threshold of interest from the dropdown menu and 
+                      clicking the ", strong("Plot"), " button to view maps.
+                      Clicking on one of the maps will provide the values at 
+                      that location in the the lower left corner of each map.",
+                      br(),
+                      br(),
+                      "Pest examples: Two common pests in this region are 
+                      provided to illustrate how this tool may be used when AGDD 
+                      thresholds for a species are known. After selecting the ", 
+                      strong("Pest"),
+                      "radio button and the subsequent options of interest, 
+                      click ", strong("Update threshold"), " and then the ",
+                      strong("Plot"), " button to view maps. A list of known 
+                      AGDD thresholds for other pests maybe found on the ",
+                      tags$a(
+                        href = "https://www.usanpn.org/data/maps/forecasts",
+                        "USA-NPN website."
+                      )
+                    ),
+                    radioButtons("method", "Selection method",
+                                 choices = c("Threshold" = "Threshold", 
+                                             "Pest" = "Pest"),
+                                 inline = TRUE),
+                    uiOutput("selections"),
+                    br(),
+                    br(),
+                    sliderInput(inputId = "opacity",
+                                label = "Opacity:",
+                                min = 0,
+                                max = 1, 
+                                value = 0.8)
+          ),
+          nav_panel("Background",
+                    br(),
+                    p("This website displays maps indicating when locations in 
+                      the northeastern U.S. reach accumulated growing degree day 
+                      (AGDD) thresholds, both in the current calendar year and 
+                      averaged over a recent 30-year period (1991-2020). Maps 
+                      are provided for 50 thresholds in 50 degree-day 
+                      increments, from 50 AGDD to 2500 AGDD. Thresholds can be 
+                      selected in the Settings tab by selecting an AGDD 
+                      threshold directly or by selecting a pest species and 
+                      biological event.",
+                      br(),
+                      br(),
+                      "For each threshold, four maps are displayed:"),
+                      tags$ul(
+                        tags$li(strong("Current day of year: "), 
+                                "The day of year the threshold was reached this 
+                                calendar year."),
+                        tags$li(strong("Deviation from average: "), 
+                                "The number of days earlier or later the
+                                threshold has been reached this year compared to
+                                the average day the threshold was reached in 
+                                1991-2020."),
+                        tags$li(strong("Average day of year: "),
+                                "The average day of year the threshold was 
+                                reached between 1991 and 2020."),
+                        tags$li(strong("Variability associated with average conditions: "),
+                                "The variability (standard deviation) associated 
+                                with the average day of year the threshold was 
+                                reached between 1991 and 2020.")
+                      ),
+                    p("This project was supported by the Northeast Climate 
+                      Adapation Science Center, the USA National Phenology 
+                      Network, the University of Arizona, and the U.S. Forest 
+                      Service."),
+                    div(
+                      # style = "text-align: center;",
+                      style = "display: inline-flex; justify-content: space-evenly; align-items: center;",
+                      img(src = "NECASClogo.png", height = "70%", width = "70%"),
+                      img(src = "USFSlogo.png", height = "20%", width = "20%")
+                    ),
+                    div(
+                      style = "display: inline-flex; justify-content: space-evenly; align-items: center;",
+                      img(src = "NPNlogo.png", height = "50%", width = "50%"),
+                      img(src = "UAlogo.png", height = "25%", width = "25%")
+                    )
+          ),
+          nav_panel("Methods",
+                    br(),
+                    p(strong("Current day of year"), " and ",
+                      strong("Deviation from average"), " maps: ",
+                      br(),
+                      "We obtained daily minimum and maximum temperatures 
+                      for the northeastern U.S. at 4-km resolution for the 
+                      current calendar year through yesterday from the PRISM 
+                      Climate Group (Oregon State University, ",
+                      tags$a(href = "https://prism.oregonstate.edu", 
+                             "https://prism.oregonstate.edu", 
+                             .noWS = "after"),
+                      "). We used these data to calculate accumulated growing 
+                      degree days (AGDD) using the Baskerville-Emin method with 
+                      a base temperature of 50 deg F and a start date of 
+                      January 1, and identified the day of the year that each of
+                      50 thresholds was reached. To calculate deviations from
+                      average conditions, we subtracted the current day of the 
+                      year a threshold was reached from the long-term average; 
+                      negative values indicate a threshold was reached earlier 
+                      than normal and positive values indicate a threshold was 
+                      reached later than normal."
+                    ), 
+                    p(strong("Average day of year"), " and ",
+                      strong("Variability associated with average conditions"),
+                      "maps:",
+                      br(),
+                      "We used the same methods described above to
+                      calculate daily AGDD values for each year from 1991 to 
+                      2020. The maps display the average day of the year each 
+                      threshold was reached (or its variability) over the 
+                      30-year period. We excluded any locations where the 
+                      threshold was reached in only one of the 30 years."
+                    ),
+                    br(),
+                    p(strong("Disclaimer:"),
+                      "Actual AGDD values and threshold dates may differ from 
+                      those presented here due to local environmental 
+                      conditions. Activities or decisions based on these data 
+                      should be buffered accordingly.")
+          )
+        )
     ),
     width = "25%"
   ),
-    
+  
   layout_column_wrap(
     width = 1/2,
-    plot_card(textOutput(outputId = "anom_header"), leafletOutput("anom")),
     plot_card(textOutput(outputId = "doy_header"), leafletOutput("doy")),
-    plot_card("Mean day of year", leafletOutput("mean")),
-    plot_card("Standard deviation", leafletOutput("sd")),
+    plot_card(textOutput(outputId = "anom_header"), leafletOutput("anom")),
+    plot_card("Average day of year", leafletOutput("mean")),
+    plot_card("Variability associated with average conditions", leafletOutput("sd")),
     gap = 0
   )
 )
 
 # server ----------------------------------------------------------------------#
 
-server <- shinyServer(function(input, output, session) {
+server <- function(input, output, session) {
   
   threshold <- reactiveVal(0)
   
@@ -251,7 +289,7 @@ server <- shinyServer(function(input, output, session) {
   })
   
   v <- reactiveValues(
-    anom_header = "Anomaly",
+    anom_header = "Deviation from average",
     doy_header = "Current day of year"
   )
   output$anom_header <- renderText({v$anom_header})
@@ -288,16 +326,23 @@ server <- shinyServer(function(input, output, session) {
                                choices = unique(pests$spp),
                                selected = "")
     output[[2]] <- selectInput("event", "Biological event", choices = NULL)
-    output[[3]] <- selectInput("type", "Threshold type", choices = NULL)
-    output[[4]] <- actionButton(inputId = "show_threshold",
-                                label = "Update threshold",
-                                class = "btn btn-primary btn-sm")
-    output[[5]] <- p("")
-    output[[6]] <- value_box(title = "Selected threshold",
-                             value = uiOutput("selected"),
-                             theme = "text-blue",
-                             max_height = "100px")
-    output[[7]] <- actionButton(inputId = "plot",
+    output[[3]] <- layout_columns(
+      col_widths = c(5, 7),
+      actionButton(inputId = "show_threshold",
+                   label = "Update threshold",
+                   class = "btn btn-primary btn-sm",
+                   style = "margin-top: 5px;"),
+      div(class = "custom-threshold-box",
+          style = "display: flex; align-items: center; justify-content: space-between; 
+                   border: 1px solid #dee2e6; border-radius: 0.25rem; padding: 0.5rem 1rem;
+                   background-color: #f8f9fa; min-height: 60px;",
+          div(style = "font-size: 0.90rem; color: #6c757d; font-weight: 500;", 
+              "Selected threshold"),
+          div(style = "font-size: 1.25rem; font-weight: 500;",
+              uiOutput("selected"))
+      )
+    )
+    output[[4]] <- actionButton(inputId = "plot",
                                 label = "Plot", 
                                 class = "btn btn-primary",
                                 disabled = TRUE)
@@ -323,36 +368,25 @@ server <- shinyServer(function(input, output, session) {
     updateSelectInput(inputId = "type", choices = "")
     updateActionButton(input = "plot", disabled = TRUE)
   })
-  
-  # Create choices for Type input
-  observeEvent(input$event, {
-    type_choices <- pests %>% 
-      filter(spp %in% c(input$pest, ""), 
-             event %in% c(input$event, "")) %>%
-      pull(type)
-    updateSelectInput(inputId = "type", choices = type_choices, selected = "")
-    output$selected <- renderText({""})
-    updateActionButton(input = "plot", disabled = TRUE)
-  })
-  
+
   # Clear selected threshold if changed threshold type 
-  observeEvent(input$type, {
+  observeEvent(input$event, {
     output$selected <- renderText({""})
     updateActionButton(input = "plot", disabled = TRUE)
   })
   
   # Identify selected threshold if going with pest options
   observeEvent(input$show_threshold, {
-    req(input$pest, input$event, input$type)
+    req(input$pest, input$event)
     selected <- pests %>% 
-      filter(spp == input$pest, event == input$event, type == input$type) %>%
+      filter(spp == input$pest, event == input$event) %>%
       pull(threshold)
     output$selected <- renderText({selected})
     updateActionButton(inputId = "plot", disabled = FALSE)
     threshold(selected)
   })
   
-  # Create base maps
+  # Initialize base maps 
   output$anom <- renderLeaflet({
     leaflet() %>%
       fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
@@ -362,23 +396,34 @@ server <- shinyServer(function(input, output, session) {
           const observer = new MutationObserver(function(mutations) {
             mutations.forEach(function(mutation) {
               if (mutation.addedNodes.length > 0) {
-                var labels = el.querySelectorAll('.info.legend text'); // 1 Find all legend text elements as before
+                var labels = el.querySelectorAll('.info.legend text');
                 if (labels.length > 0) {
-                  //console.log('Applying text alignment to', labels.length, 'legend labels');
                   labels.forEach(function(label) {
-                    label.setAttribute('text-anchor', 'start'); // 2
+                    label.setAttribute('text-anchor', 'start');
                     label.setAttribute('dx', '5');
                   });
                 }
               }
             });
           });
-          // 3 observing the entire map container el for changes
           observer.observe(el, { childList: true, subtree: true });
+          
+          // Add click handler for synchronized queries
+          el.addEventListener('click', function(e) {
+            var map = this;
+            if (map._leaflet_map) {
+              var latlng = map._leaflet_map.mouseEventToLatLng(e);
+              Shiny.setInputValue('anom_click', {
+                lat: latlng.lat,
+                lng: latlng.lng,
+                nonce: Math.random()
+              });
+            }
+          });
         }
       ")
   })
-
+  
   output$doy <- renderLeaflet({
     leaflet() %>%
       fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
@@ -388,19 +433,30 @@ server <- shinyServer(function(input, output, session) {
           const observer = new MutationObserver(function(mutations) {
             mutations.forEach(function(mutation) {
               if (mutation.addedNodes.length > 0) {
-                var labels = el.querySelectorAll('.info.legend text'); // 1 Find all legend text elements as before
+                var labels = el.querySelectorAll('.info.legend text');
                 if (labels.length > 0) {
-                  //console.log('Applying text alignment to', labels.length, 'legend labels');
                   labels.forEach(function(label) {
-                    label.setAttribute('text-anchor', 'start'); // 2
+                    label.setAttribute('text-anchor', 'start');
                     label.setAttribute('dx', '5');
                   });
                 }
               }
             });
           });
-          // 3 observing the entire map container el for changes
           observer.observe(el, { childList: true, subtree: true });
+          
+          // Add click handler for synchronized queries
+          el.addEventListener('click', function(e) {
+            var map = this;
+            if (map._leaflet_map) {
+              var latlng = map._leaflet_map.mouseEventToLatLng(e);
+              Shiny.setInputValue('doy_click', {
+                lat: latlng.lat,
+                lng: latlng.lng,
+                nonce: Math.random()
+              });
+            }
+          });
         }
       ")
   })
@@ -414,19 +470,30 @@ server <- shinyServer(function(input, output, session) {
           const observer = new MutationObserver(function(mutations) {
             mutations.forEach(function(mutation) {
               if (mutation.addedNodes.length > 0) {
-                var labels = el.querySelectorAll('.info.legend text'); // 1 Find all legend text elements as before
+                var labels = el.querySelectorAll('.info.legend text');
                 if (labels.length > 0) {
-                  //console.log('Applying text alignment to', labels.length, 'legend labels');
                   labels.forEach(function(label) {
-                    label.setAttribute('text-anchor', 'start'); // 2
+                    label.setAttribute('text-anchor', 'start');
                     label.setAttribute('dx', '5');
                   });
                 }
               }
             });
           });
-          // 3 observing the entire map container el for changes
           observer.observe(el, { childList: true, subtree: true });
+          
+          // Add click handler for synchronized queries
+          el.addEventListener('click', function(e) {
+            var map = this;
+            if (map._leaflet_map) {
+              var latlng = map._leaflet_map.mouseEventToLatLng(e);
+              Shiny.setInputValue('mean_click', {
+                lat: latlng.lat,
+                lng: latlng.lng,
+                nonce: Math.random()
+              });
+            }
+          });
         }
       ")
   })
@@ -440,21 +507,147 @@ server <- shinyServer(function(input, output, session) {
           const observer = new MutationObserver(function(mutations) {
             mutations.forEach(function(mutation) {
               if (mutation.addedNodes.length > 0) {
-                var labels = el.querySelectorAll('.info.legend text'); // 1 Find all legend text elements as before
+                var labels = el.querySelectorAll('.info.legend text');
                 if (labels.length > 0) {
-                  //console.log('Applying text alignment to', labels.length, 'legend labels');
                   labels.forEach(function(label) {
-                    label.setAttribute('text-anchor', 'start'); // 2
+                    label.setAttribute('text-anchor', 'start');
                     label.setAttribute('dx', '5');
                   });
                 }
               }
             });
           });
-          // 3 observing the entire map container el for changes
           observer.observe(el, { childList: true, subtree: true });
+          
+          // Add click handler for synchronized queries
+          el.addEventListener('click', function(e) {
+            var map = this;
+            if (map._leaflet_map) {
+              var latlng = map._leaflet_map.mouseEventToLatLng(e);
+              Shiny.setInputValue('sd_click', {
+                lat: latlng.lat,
+                lng: latlng.lng,
+                nonce: Math.random()
+              });
+            }
+          });
         }
       ")
+  })
+  
+  # Store current rasters for querying
+  currentRasters <- reactiveValues(
+    anom = NULL,
+    doy = NULL,
+    mean = NULL,
+    sd = NULL
+  )
+  
+  # Helper function to get raster value at coordinates
+  getRasterValue <- function(raster, lat, lng) {
+    if (is.null(raster)) return(NULL)
+    tryCatch({
+      pt <- sp::SpatialPoints(cbind(lng, lat), proj4string = sp::CRS("+proj=longlat +datum=WGS84"))
+      pt_transformed <- sp::spTransform(pt, raster::crs(raster))
+      value <- raster::extract(raster, pt_transformed)
+      if (!is.na(value) && !is.null(value)) {
+        round(value, 2)
+      } else {
+        NULL
+      }
+    }, error = function(e) NULL)
+  }
+  
+  # Create reactive values to store click coordinates
+  clickCoords <- reactiveVal(NULL)
+  
+  # Observe clicks on any map and update all
+  observeEvent(input$anom_click, {
+    clickCoords(list(lat = input$anom_click$lat, lng = input$anom_click$lng))
+  })
+  
+  observeEvent(input$doy_click, {
+    clickCoords(list(lat = input$doy_click$lat, lng = input$doy_click$lng))
+  })
+  
+  observeEvent(input$mean_click, {
+    clickCoords(list(lat = input$mean_click$lat, lng = input$mean_click$lng))
+  })
+  
+  observeEvent(input$sd_click, {
+    clickCoords(list(lat = input$sd_click$lat, lng = input$sd_click$lng))
+  })
+  
+  # Update all map displays when coordinates change
+  observeEvent(clickCoords(), {
+    req(clickCoords())
+    coords <- clickCoords()
+    
+    # Get values from all rasters
+    anom_val <- getRasterValue(currentRasters$anom, coords$lat, coords$lng)
+    doy_val <- getRasterValue(currentRasters$doy, coords$lat, coords$lng)
+    mean_val <- getRasterValue(currentRasters$mean, coords$lat, coords$lng)
+    sd_val <- getRasterValue(currentRasters$sd, coords$lat, coords$lng)
+    
+    # Update each map with custom HTML control showing the value
+    # Use removeControl with layerId instead of clearControls to preserve legends
+    # If value is NULL, remove the control entirely
+    if (!is.null(anom_val)) {
+      leafletProxy("anom") %>%
+        removeControl(layerId = "query_result") %>%
+        addControl(
+          html = paste0("<div style='background: white; padding: 5px; font-size: 14px;'>", 
+                        "Anomaly, in days (negative = early; positive = late): ",
+                        anom_val, "</div>"),
+          position = "bottomleft",
+          layerId = "query_result"
+        )
+    } else {
+      leafletProxy("anom") %>%
+        removeControl(layerId = "query_result")
+    }
+    
+    if (!is.null(doy_val)) {
+      leafletProxy("doy") %>%
+        removeControl(layerId = "query_result") %>%
+        addControl(
+          html = paste0("<div style='background: white; padding: 5px; font-size: 14px;'>", 
+                        "Current day of year: ", doy_val, "</div>"),
+          position = "bottomleft",
+          layerId = "query_result"
+        )
+    } else {
+      leafletProxy("doy") %>%
+        removeControl(layerId = "query_result")
+    }
+    
+    if (!is.null(mean_val)) {
+      leafletProxy("mean") %>%
+        removeControl(layerId = "query_result") %>%
+        addControl(
+          html = paste0("<div style='background: white; padding: 5px; font-size: 14px;'>", 
+                        "Average day of year: ", mean_val, "</div>"),
+          position = "bottomleft",
+          layerId = "query_result"
+        )
+    } else {
+      leafletProxy("mean") %>%
+        removeControl(layerId = "query_result")
+    }
+    
+    if (!is.null(sd_val)) {
+      leafletProxy("sd") %>%
+        removeControl(layerId = "query_result") %>%
+        addControl(
+          html = paste0("<div style='background: white; padding: 5px; font-size: 14px;'>", 
+                        "Standard deviation, in days: ", sd_val, "</div>"),
+          position = "bottomleft",
+          layerId = "query_result"
+        )
+    } else {
+      leafletProxy("sd") %>%
+        removeControl(layerId = "query_result")
+    }
   })
   
   # Execute after clicking Plot button
@@ -465,15 +658,23 @@ server <- shinyServer(function(input, output, session) {
     reacMean <- means[[paste0("t", threshold())]]
     reacSD <- sds[[paste0("t", threshold())]]
     
+    # Store rasters for querying
+    currentRasters$anom <- reacAnom
+    currentRasters$doy <- reacDOY
+    currentRasters$mean <- reacMean
+    currentRasters$sd <- reacSD
+    
     # Determine whether any locations have met threshold this year
     reacDOY_NA <- ifelse(ncell(reacDOY) == freq(reacDOY, value = NA), 
                          TRUE, FALSE)
     
     if (reacDOY_NA == TRUE) {
-      v$anom_header <- "Anomaly - NO LOCATIONS REACHED THRESHOLD YET"
+      v$anom_header <- "Deviation from average - NO LOCATIONS REACHED THRESHOLD YET"
       v$doy_header <- "Current day of year - NO LOCATIONS REACHED THRESHOLD YET"
+      currentRasters$anom <- NULL
+      currentRasters$doy <- NULL
     } else {
-      v$anom_header <- "Anomaly"
+      v$anom_header <- "Deviation from average"
       v$doy_header <- "Current day of year"
     } 
 
@@ -494,8 +695,8 @@ server <- shinyServer(function(input, output, session) {
       fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
       addRasterImage(reacMean,
                      colors = pal_mean,
-                     group = "Mean DOY",
-                     layerId = "Mean DOY",
+                     group = "Average day of year",
+                     layerId = "Average day of year",
                      opacity = input$opacity,
                      project = FALSE) %>%
       addLegend("bottomright",
@@ -504,13 +705,6 @@ server <- shinyServer(function(input, output, session) {
                 labFormat = myLabelFormat(dates = TRUE),
                 title = NULL,
                 opacity = 0.8) %>%
-      addImageQuery(reacMean,
-                    digits = 2,
-                    type = "click",
-                    position = "bottomleft",
-                    prefix = "",
-                    layerId = "Mean DOY",
-                    project = TRUE) %>%
       addLeafletsync(c("anom", "doy", "mean", "sd"))
     
     leafletProxy("sd") %>%
@@ -519,23 +713,16 @@ server <- shinyServer(function(input, output, session) {
       fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
       addRasterImage(reacSD, 
                      colors = pal_sd,
-                     group = "SD",
-                     layerId = "SD",
+                     group = "Standard deviation, in days",
+                     layerId = "Standard deviation, in days",
                      opacity = input$opacity, 
                      project = FALSE) %>%
       addLegend("bottomright", 
                 pal = pal_sd, 
                 values = values(reacSD),
                 labFormat = myLabelFormat(dates = FALSE),
-                title = NULL, 
+                title = "Standard deviation<br>(days)", 
                 opacity = 0.8) %>%
-      addImageQuery(reacSD,
-                    digits = 2,
-                    type = "click",
-                    position = "bottomleft",
-                    prefix = "",
-                    layerId = "SD",
-                    project = TRUE) %>%
       addLeafletsync(c("anom", "doy", "mean", "sd"))
 
     if (!reacDOY_NA) {
@@ -545,8 +732,8 @@ server <- shinyServer(function(input, output, session) {
         fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
         addRasterImage(reacDOY, 
                        colors = pal_mean, 
-                       group = "Current DOY",
-                       layerId = "Current DOY",
+                       group = "Current day of year",
+                       layerId = "Current day of year",
                        opacity = input$opacity, 
                        project = FALSE) %>%
         addLegend("bottomright", 
@@ -555,13 +742,6 @@ server <- shinyServer(function(input, output, session) {
                   labFormat = myLabelFormat(dates = TRUE),
                   title = NULL, 
                   opacity = 0.8) %>%
-        addImageQuery(reacDOY,
-                      digits = 2,
-                      type = "click",
-                      position = "bottomleft",
-                      prefix = "",
-                      layerId = "Current DOY",
-                      project = TRUE) %>%
         addLeafletsync(c("anom", "doy", "mean", "sd"))
     } else {
       leafletProxy("doy") %>%
@@ -582,8 +762,8 @@ server <- shinyServer(function(input, output, session) {
         fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
         addRasterImage(reacAnom, 
                        colors = pal_anom, 
-                       group = "Anomaly (negative = early; positive = late)",
-                       layerId = "Anomaly (negative = early; positive = late)",
+                       group = "Anomaly, in days (negative = early; positive = late)",
+                       layerId = "Anomaly, in days (negative = early; positive = late)",
                        opacity = input$opacity, 
                        project = FALSE) %>%
         addLegend("bottomright", 
@@ -592,13 +772,6 @@ server <- shinyServer(function(input, output, session) {
                   labFormat = myLabelFormat(anomalies = TRUE),
                   title = NULL, 
                   opacity = 0.8) %>%
-        addImageQuery(reacAnom,
-                      digits = 2,
-                      type = "click",
-                      position = "bottomleft",
-                      prefix = "",
-                      layerId = "Anomaly (negative = early; positive = late)",
-                      project = TRUE) %>%
         addLeafletsync(c("anom", "doy", "mean", "sd"))
     } else {
       leafletProxy("anom") %>%
@@ -609,9 +782,8 @@ server <- shinyServer(function(input, output, session) {
     }
 
   }) # end observe
-}) # end server
+} # end server
 
 # run app ---------------------------------------------------------------------#
 
 shinyApp(ui = ui, server = server)
-
