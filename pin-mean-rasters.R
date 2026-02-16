@@ -1,5 +1,7 @@
 # Move 30-year Mean rasters to a pin on Posit Connect
 
+# Updating this in Feb 2026 to expand the geographic extent (now 22 states)
+
 library(pins)
 library(raster)
 library(terra)
@@ -12,7 +14,7 @@ board <- board_connect(
 )
 
 # Load static mean/SD rasters 
-mean_sd <- raster::brick("shiny-app/mean-sd-brick.tif")
+mean_sd <- raster::brick("shiny-app/mean-sd-brick-22state.tif")
 
 # Create mean RasterBrick 
 means <- mean_sd[[1:50]]
@@ -26,4 +28,4 @@ means <- terra::wrap(means)
 pin_write(board = board,
           x = means,
           type = "qs",
-          name = "ezylstra/means")
+          name = "ezylstra/tc-means")
