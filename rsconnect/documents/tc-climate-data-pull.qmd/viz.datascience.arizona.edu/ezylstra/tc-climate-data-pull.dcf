@@ -1,0 +1,14 @@
+name: tc-climate-data-pull
+title: tc-climate-data-pull
+username: ezylstra
+account: ezylstra
+server: viz.datascience.arizona.edu
+hostUrl: https://viz.datascience.arizona.edu/__api__
+appId: 1372
+bundleId: 8665
+url: https://viz.datascience.arizona.edu:443/content/6bce196d-628b-4a0e-aa54-472d4d71cd3c/
+version: 1
+quarto_version: 1.8.25
+quarto_engines: knitr
+asMultiple: FALSE
+asStatic: FALSE
