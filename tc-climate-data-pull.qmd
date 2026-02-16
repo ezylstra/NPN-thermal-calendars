@@ -1,0 +1,328 @@
+---
+title: "Download current-year climate data"
+format: html
+editor: visual
+---
+
+```{r setup}
+#| message: false
+#| warning: false
+
+library(here)
+library(httr2)
+library(maps)
+library(dplyr)
+library(lubridate)
+library(stringr)
+library(tibble)
+library(pins)
+library(qs)
+library(sf)
+library(terra)
+terraOptions(progress = 0)
+options(httr2_progress = FALSE)
+
+board <- board_connect(
+  auth = "manual",
+  server = Sys.getenv("CONNECT_SERVER"),
+  key = Sys.getenv("CONNECT_API_KEY")
+)
+
+# Create folder to hold temporary prism data
+prism_folder <- paste0(here::here(), "/prismtmp/")
+dir.create(prism_folder)
+
+# Base URL for PRISM Web Service (see https://www.prism.oregonstate.edu/downloads/)
+url_base <- "https://services.nacse.org/prism/data/get/us/4km"
+```
+
+```{r roi}
+
+# If pin with NECASC + midwest boundary data doesn't exist, download it
+if (!pin_exists(board = board, "ezylstra/tc-boundary")) {
+  roi <- maps::map(
+    database = "state",
+    regions = c(
+      "Connecticut",
+      "Delaware",
+      "Illinois",
+      "Indiana",
+      "Iowa",
+      "Kentucky",
+      "Maine",
+      "Maryland",
+      "Massachusetts",
+      "Michigan",
+      "Minnesota",
+      "Missouri",
+      "New Hampshire",
+      "New Jersey",
+      "New York",
+      "Ohio",
+      "Pennsylvania",
+      "Rhode Island",
+      "Virginia",
+      "Vermont",
+      "West Virginia",
+      "Wisconsin"
+    ),
+    plot = FALSE,
+    fill = TRUE) 
+  pin_write(board = board, x = roi, name = "ezylstra/tc-boundary")
+} else {
+  roi <- pin_read(board = board, "ezylstra/tc-boundary")
+}
+
+# Convert to SpatVector and project
+roi <- roi %>%
+  sf::st_as_sf() %>% 
+  sf::st_combine() %>% 
+  terra::vect() 
+roi <- terra::project(roi, "epsg:4269")
+```
+
+```{r gdd-function}
+
+# Function to calculate GDDs (from E. Scott)
+#' Baskerville-Emin method for GDD calculation
+#' 
+#' @param tmin Numeric vector; min daily temp in ºF.
+#' @param tmax Numeric vector; max daily temp in ºF.
+#' @param base Base temp in ºF.
+calc_gdd_be <- function(tmin = NULL, tmax = NULL, base = 32) {
+  withr::local_options(list(warn = 2)) # Turn warnings into errors in the scope of this function
+  .mapply(function(tmin, tmax) { # For each day...
+    # NAs beget NAs
+    if (is.na(tmin) | is.na(tmax)) {
+      return(NA)
+    }
+    
+    # Check that tmax >= tmin
+    if (tmin > tmax) {
+      stop("tmin > tmax!")
+    } 
+
+    # Step 2
+    if (tmax < base) {
+      return(0)
+    }
+    
+    # Step 3
+    tmean <- (tmin + tmax) / 2
+    
+    # Step 4
+    if (tmin >= base) { # Simple case
+      return (tmean - base)
+    }
+    
+    # Step 5
+    W <- (tmax - tmin) / 2
+    x <- (base - tmean) / W
+    # Special case for floating-point errors when `x` is (almost) equal to 1 or -1
+    if (isTRUE(all.equal(x, 1))) {
+      x <- 1
+    }
+    if (isTRUE(all.equal(x, -1))) {
+      x <- -1
+    }
+    A <- asin(x)
+    gdd <- ((W * cos(A)) - ((base - tmean) * ((pi/2) - A))) / pi
+    return(gdd)
+  }, dots = list(tmin = tmin, tmax = tmax), MoreArgs = NULL) |> as.numeric()
+}
+```
+
+```{r get-data}
+#| output: false
+
+# Get yesterday's date
+yesterday <- Sys.Date() - 1
+
+# Get yesterday's year
+yesterday_yr <- year(yesterday)
+
+# Sequence of current-year dates through yesterday
+dates <- seq.Date(as.Date(paste0(yesterday_yr, "-01-01")), yesterday, by = 1)
+
+# If pin doesn't exist or if it exists but is missing layers, download 
+# data for all missing dates. If script is running nightly, then will just
+# need to download yesterday's data. 
+
+GDDs_exists <- pin_exists(board, paste0("ezylstra/tc-GDDs-", yesterday_yr))
+up_to_date <- FALSE
+missing <- dates
+
+if (GDDs_exists) {
+  GDDs <- pin_read(board = board, paste0("ezylstra/tc-GDDs-", yesterday_yr))
+  GDDs <- terra::unwrap(GDDs)
+  last_date <- str_remove(last(names(GDDs)), "d") %>%
+    str_replace_all(pattern = "\\.", replacement = "-") %>%
+    as.Date()
+  up_to_date <- ifelse(nlyr(GDDs) == length(dates) & last_date == yesterday, TRUE, FALSE)
+
+  if (up_to_date == FALSE) {
+    # Identify which dates are missing
+    gdd_layers <- str_remove(names(GDDs), "d") 
+    missing <- setdiff(as.character(dates), gdd_layers)
+  }
+}
+
+if (up_to_date == TRUE) {
+  
+  stop("GDDs have already been calculated through yesterday")
+
+} else {
+  
+  # Loop through missing dates
+  for (i in 1:length(missing)) {
+  
+    message(paste0("Calculating GDD for ", missing[i]))
+    
+    # Date without dashes
+    date_nodash <- str_remove_all(missing[i], "-")
+    
+    # Create folder/zip names
+    min_folder <- paste0("prism_tmin_us_25m_", date_nodash)
+    min_zip <- paste0(prism_folder, min_folder, ".zip")
+    max_folder <- paste0("prism_tmax_us_25m_", date_nodash)
+    max_zip <- paste0(prism_folder, max_folder, ".zip")
+    
+    # Download min and max temperatures (ºC)
+    req <- request(url_base)
+    
+    req_min <- req %>%
+      req_url_path_append("tmin", date_nodash)
+    resp_min <- resp_content_type(req_perform(req_min, path = min_zip))
+    
+    # Check that the zip contains data. If not (because PRISM hasn't published 
+    # yet), skip this date.
+    if (resp_min == "text/html") {next}
+
+    req_max <- req %>%
+      req_url_path_append("tmax", date_nodash)
+    resp_max <- resp_content_type(req_perform(req_max, path = max_zip))
+    
+    # Check that the zip contains data. If not (because PRISM hasn't published 
+    # yet), skip this date.
+    if (resp_max == "text/html") {next}
+    
+    # Unzip folders
+    suppressWarnings(
+      utils::unzip(min_zip, exdir = paste0(prism_folder, min_folder))
+    )
+    suppressWarnings(
+      utils::unzip(max_zip, exdir = paste0(prism_folder, max_folder))
+    )
+    
+    # Remove zips
+    invisible(file.remove(min_zip))
+    invisible(file.remove(max_zip))
+    
+    # Read files in as SpatRasters
+    tmin_file <- paste0(prism_folder, min_folder, "/", min_folder, ".tif")
+    tmax_file <- paste0(prism_folder, max_folder, "/", max_folder, ".tif")
+    tmin <- terra::rast(tmin_file)
+    tmax <- terra::rast(tmax_file)
+    
+    # Crop temperature rasters to NE
+    tmin_roi <- terra::crop(tmin, roi, mask = TRUE)
+    tmax_roi <- terra::crop(tmax, roi, mask = TRUE)
+    
+    # Convert temperatures to ºF
+    tmin_roi <- tmin_roi * 9/5 + 32
+    tmax_roi <- tmax_roi * 9/5 + 32
+    
+    # Calculate GDDs
+    temps_sds <- terra::sds(tmin_roi, tmax_roi)
+    gdd <- terra::lapp(temps_sds, function(x, y) {
+      calc_gdd_be(
+        tmin = x,
+        tmax = y,
+        base = 50
+      )
+    })  
+    
+    # Name layer
+    names(gdd) <- paste0("d", missing[i])
+    
+    # If there are no GDD layers already, create GDDs. Otherwise append.
+    if (!exists("GDDs")) {
+      GDDs <- gdd
+    } else {
+      GDDs <- c(GDDs, gdd)
+    }
+  }
+}
+
+# Sort layers (just in case)
+sorted_names <- sort(names(GDDs))
+GDDs <- GDDs[[sorted_names]]
+```
+
+```{r  agdd-thresholds}
+#| message: false
+
+# Calculate AGDD
+agdd <- cumsum(GDDs)
+
+# Load rasters with mean day-of-year each threshold was reached (1991-2020)
+means <- pin_read(board = board, "ezylstra/tc-means")
+means <- terra::unwrap(means)
+
+# Re-project to CRS that's needed for Leaflet (to ensure DOY is whole number)
+# (see leaflet::projectRasterForLeaflet)
+agdd <- terra::project(agdd, means[[1]])
+
+# For each threshold, determine what day of the year the threshold was reached
+thresholds <- seq(50, 2500, by = 50)
+threshold_doys <- list()
+for (i in 1:length(thresholds)) {
+  threshold_doys[[i]] <- terra::which.lyr(agdd > thresholds[i])
+}
+# Convert list to SpatRaster
+threshold_doys <- terra::rast(threshold_doys)
+names(threshold_doys) <- thresholds
+
+# Change `NA`s that represent never reaching the threshold GDD to `Inf`s.
+# These will be treated the same for modeling (i.e. dropped), but will allow
+# different treatment for plotting
+# threshold_doys[is.na(threshold_doys) & !is.na(agdd[[1]])] <- Inf
+```
+
+```{r anomalies}
+#| message: false
+
+# Calculate anomalies (current DOY - mean DOY)
+currentmeans <- terra::sds(threshold_doys, means)
+anomalies <- terra::lapp(currentmeans, function(x, y) {x - y})
+# Positive values = reached threshold later than normal
+# Negative values = reached threshold earlier than normal
+```
+
+```{r save}
+#| warning: false
+
+# Pin new DOY rasters
+threshold_doys <- terra::wrap(threshold_doys)
+pin_write(board = board,
+          x = threshold_doys,
+          type = "qs",
+          name = paste0("ezylstra/tc-current-doys-", yesterday_yr))
+
+# Pin new anomaly rasters
+anomalies <- terra::wrap(anomalies)
+pin_write(board = board,
+          x = anomalies,
+          type = "qs",
+          name = paste0("ezylstra/tc-anomalies-", yesterday_yr))
+
+# Pin new GDD rasters
+GDDs <- terra::wrap(GDDs)
+pin_write(board = board,
+          x = GDDs,
+          type = "qs",
+          name = paste0("ezylstra/tc-GDDs-", yesterday_yr))
+
+# Delete temporary folder
+unlink(prism_folder, recursive = TRUE)
+```
