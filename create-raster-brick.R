@@ -2,15 +2,18 @@
 # loading of the shiny app)
 
 # ER Zylstra
-# 5 May 2025
+# 16 Feb 2026
+
+# Note: updated this in Feb 2026. Originally, we kept the geographic extent 
+# to 14 states in the NE. Then we wanted the app to include the NE and upper
+# midwest (like the manuscript). Moved the original rasters to folders that have
+# "14state" in the name and put the new rasters with the larger geographic 
+# extent into the rasters-means, rasters-sds, and rasters-counts folders.
 
 library(dplyr)
 library(raster)
 library(leaflet)
 library(leafem)
-
-# Note: using raster instead of terra for this project since terra doesn't seem 
-# to play nice with leafem::addImageQuery()
 
 # List of thresholds
 thresholds <- seq(50, 2500, by = 50)
@@ -113,7 +116,7 @@ all_rast <- projectRaster(all_rast, raster::projectExtent(all_rast,
 
 # Write RasterBrick to file (in shiny-app folder)
 writeRaster(all_rast, 
-            filename = "shiny-app/mean-sd-brick", 
+            filename = "shiny-app/mean-sd-brick-22state", 
             format = "GTiff", 
             overwrite = TRUE,
             options = c("INTERLEAVE = BAND", "COMPRESS = LZW"))
