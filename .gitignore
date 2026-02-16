@@ -13,3 +13,9 @@ rasters-counts/*
 rasters-archive/*
 !rasters-archive/.gitkeep
 
+rasters-means-14state/*
+!rasters-means-14state/.gitkeep
+rasters-sds-14state/*
+!rasters-sds-14state/.gitkeep
+rasters-counts-14state/*
+!rasters-counts-14state/.gitkeep
