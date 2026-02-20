@@ -2,7 +2,7 @@
 # DOY & SD)
 
 # ER Zylstra
-# 13 Feb 2026
+# 20 Feb 2026
 
 library(dplyr)
 library(lubridate)
@@ -29,14 +29,14 @@ yesterday <- Sys.Date() - 1
 yesterday_yr <- year(yesterday)
 
 # Load current-year rasters
-doys <- pin_read(board, paste0("ezylstra/current-doys-", yesterday_yr, "-prism"))
+doys <- pin_read(board, paste0("ezylstra/tc-current-doys-", yesterday_yr))
 doys <- terra::unwrap(doys)
 # Convert to RasterBrick
 doys <- raster::brick(doys)
 names(doys) <- stringr::str_replace_all(names(doys), "X", "t")
 
 # Load anomaly rasters
-anoms <- pin_read(board, paste0("ezylstra/anomalies-", yesterday_yr, "-prism"))
+anoms <- pin_read(board, paste0("ezylstra/tc-anomalies-", yesterday_yr))
 anoms <- terra::unwrap(anoms)
 # Convert to RasterBrick
 anoms <- raster::brick(anoms)
@@ -90,6 +90,12 @@ plot_card <- function(header, ...) {
     card_body(..., min_height = 150, class = "p-0")
   )
 }
+
+# Map bounds
+lng1 <- -98
+lat1 <- 37
+lng2 <- -65
+lat2 <- 49
 
 # ui --------------------------------------------------------------------------#
 
@@ -393,7 +399,7 @@ server <- function(input, output, session) {
   # Initialize base maps 
   output$anom <- renderLeaflet({
     leaflet() %>%
-      fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
+      fitBounds(lng1 = lng1, lat1 = lat1, lng2 = lng2, lat2 = lat2) %>%
       addTiles() %>%
       htmlwidgets::onRender("
         function(el, x) {
@@ -430,7 +436,7 @@ server <- function(input, output, session) {
   
   output$doy <- renderLeaflet({
     leaflet() %>%
-      fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
+      fitBounds(lng1 = lng1, lat1 = lat1, lng2 = lng2, lat2 = lat2) %>%
       addTiles() %>%
       htmlwidgets::onRender("
         function(el, x) {
@@ -467,7 +473,7 @@ server <- function(input, output, session) {
   
   output$mean <- renderLeaflet({
     leaflet() %>%
-      fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
+      fitBounds(lng1 = lng1, lat1 = lat1, lng2 = lng2, lat2 = lat2) %>%
       addTiles() %>%
       htmlwidgets::onRender("
         function(el, x) {
@@ -504,7 +510,7 @@ server <- function(input, output, session) {
   
   output$sd <- renderLeaflet({
     leaflet() %>%
-      fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
+      fitBounds(lng1 = lng1, lat1 = lat1, lng2 = lng2, lat2 = lat2) %>%
       addTiles() %>%
       htmlwidgets::onRender("
         function(el, x) {
@@ -696,7 +702,7 @@ server <- function(input, output, session) {
     leafletProxy("mean") %>%
       clearImages() %>%
       removeControl(layerId = "legend") %>%
-      fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
+      fitBounds(lng1 = lng1, lat1 = lat1, lng2 = lng2, lat2 = lat2) %>%
       addRasterImage(reacMean,
                      colors = pal_mean,
                      group = "Average day of year",
@@ -715,7 +721,7 @@ server <- function(input, output, session) {
     leafletProxy("sd") %>%
       clearImages() %>%
       removeControl(layerId = "legend") %>%
-      fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
+      fitBounds(lng1 = lng1, lat1 = lat1, lng2 = lng2, lat2 = lat2) %>%
       addRasterImage(reacSD, 
                      colors = pal_sd,
                      group = "Standard deviation, in days",
@@ -735,7 +741,7 @@ server <- function(input, output, session) {
       leafletProxy("doy") %>%
         clearImages() %>%
         removeControl(layerId = "legend") %>%
-        fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
+        fitBounds(lng1 = lng1, lat1 = lat1, lng2 = lng2, lat2 = lat2) %>%
         addRasterImage(reacDOY, 
                        colors = pal_mean, 
                        group = "Current day of year",
@@ -754,7 +760,7 @@ server <- function(input, output, session) {
       leafletProxy("doy") %>%
         clearImages() %>%
         removeControl(layerId = "legend") %>%
-        fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
+        fitBounds(lng1 = lng1, lat1 = lat1, lng2 = lng2, lat2 = lat2) %>%
         addLeafletsync(c("anom", "doy", "mean", "sd"))
     }
     
@@ -766,7 +772,7 @@ server <- function(input, output, session) {
       leafletProxy("anom") %>%
         clearImages() %>%
         removeControl(layerId = "legend") %>%
-        fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
+        fitBounds(lng1 = lng1, lat1 = lat1, lng2 = lng2, lat2 = lat2) %>%
         addRasterImage(reacAnom, 
                        colors = pal_anom, 
                        group = "Anomaly, in days (negative = early; positive = late)",
@@ -785,7 +791,7 @@ server <- function(input, output, session) {
       leafletProxy("anom") %>%
         clearImages() %>%
         removeControl(layerId = "legend") %>%
-        fitBounds(lng1 = -88, lat1 = 35, lng2 = -65, lat2 = 47) %>%
+        fitBounds(lng1 = lng1, lat1 = lat1, lng2 = lng2, lat2 = lat2) %>%
         addLeafletsync(c("anom", "doy", "mean", "sd"))
     }
 

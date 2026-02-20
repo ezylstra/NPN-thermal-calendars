@@ -5,7 +5,7 @@ account: ezylstra
 server: viz.datascience.arizona.edu
 hostUrl: https://viz.datascience.arizona.edu/__api__
 appId: 1246
-bundleId: 8634
+bundleId: 8767
 url: https://viz.datascience.arizona.edu:443/content/0af6acf3-a20a-4f7d-9fb4-77bbb75f3a76/
 version: 1
 asMultiple: FALSE
