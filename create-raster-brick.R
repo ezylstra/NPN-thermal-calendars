@@ -116,7 +116,7 @@ all_rast <- projectRaster(all_rast, raster::projectExtent(all_rast,
 
 # Write RasterBrick to file (in shiny-app folder)
 writeRaster(all_rast, 
-            filename = "shiny-app/mean-sd-brick-22state", 
+            filename = "shiny-app/mean-sd-brick", 
             format = "GTiff", 
             overwrite = TRUE,
             options = c("INTERLEAVE = BAND", "COMPRESS = LZW"))

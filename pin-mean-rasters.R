@@ -14,7 +14,7 @@ board <- board_connect(
 )
 
 # Load static mean/SD rasters 
-mean_sd <- raster::brick("shiny-app/mean-sd-brick-22state.tif")
+mean_sd <- raster::brick("shiny-app/mean-sd-brick.tif")
 
 # Create mean RasterBrick 
 means <- mean_sd[[1:50]]
