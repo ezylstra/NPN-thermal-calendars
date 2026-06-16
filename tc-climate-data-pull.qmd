@@ -16,7 +16,7 @@ library(lubridate)
 library(stringr)
 library(tibble)
 library(pins)
-library(qs)
+library(qs2)
 library(sf)
 library(terra)
 terraOptions(progress = 0)
@@ -306,21 +306,21 @@ anomalies <- terra::lapp(currentmeans, function(x, y) {x - y})
 threshold_doys <- terra::wrap(threshold_doys)
 pin_write(board = board,
           x = threshold_doys,
-          type = "qs",
+          type = "qs2",
           name = paste0("ezylstra/tc-current-doys-", yesterday_yr))
 
 # Pin new anomaly rasters
 anomalies <- terra::wrap(anomalies)
 pin_write(board = board,
           x = anomalies,
-          type = "qs",
+          type = "qs2",
           name = paste0("ezylstra/tc-anomalies-", yesterday_yr))
 
 # Pin new GDD rasters
 GDDs <- terra::wrap(GDDs)
 pin_write(board = board,
           x = GDDs,
-          type = "qs",
+          type = "qs2",
           name = paste0("ezylstra/tc-GDDs-", yesterday_yr))
 
 # Delete temporary folder
