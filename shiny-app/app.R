@@ -16,7 +16,7 @@ library(htmlwidgets)
 library(bslib)
 library(shinyjs)
 library(pins)
-library(qs)
+library(qs2)
 
 board <- board_connect(
   auth = "manual",
